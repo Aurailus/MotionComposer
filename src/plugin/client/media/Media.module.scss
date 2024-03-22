@@ -1,0 +1,55 @@
+.media_grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 8px;
+	margin-right: -16px;
+}
+
+.media_item {
+	aspect-ratio: 1.1;
+	background-color: var(--surface-color-hover);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	border-radius: 4px;
+
+	.thumbnail {
+		background-color: color-mix(in hsl, white 4%, transparent);
+		flex-grow: 1;
+		display: grid;
+		place-content: center;
+		position: relative;
+
+		> p {
+			position: absolute;
+			bottom: 4px;
+			right: 4px;
+			font-size: 12px;
+			font-weight: bold;
+			opacity: 0.4;
+		}
+
+		svg {
+			opacity: 0.2;
+			width: 36px;
+			height: 36px;
+			padding-bottom: 6px;
+		}
+	}
+
+	p {
+		flex-shrink: 0;
+		line-height: 1;
+		padding: 0;
+		margin: 0;
+	}
+
+	> p {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		padding: 8px;
+		font-size: 12px;
+		font-weight: 600;
+	}
+}

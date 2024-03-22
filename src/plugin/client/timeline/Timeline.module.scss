@@ -1,0 +1,468 @@
+.overlay {
+	position: fixed;
+	z-index: 1000;
+	bottom: 28px;
+	left: 52px;
+	right: 0;
+	overflow: hidden;
+	display: grid;
+}
+
+.timeline {
+	background-color: var(--background-color);
+	overflow: hidden;
+	display: grid;
+	grid-template-columns: 120px 1fr;
+}
+
+.timeline_labels {
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-template-rows: 96px 32px;
+	grid-auto-rows: 32px;
+	border-right: 2px solid var(--background-color-dark);
+	background-color: var(--background-color);
+}
+
+.timeline_label {
+	&:not(:first-child) { border-top: 2px solid var(--background-color-dark); }
+	display: flex;
+	align-items: center;
+	text-align: right;
+	padding: 0px 8px;
+
+	label {
+		width: 100%;
+	}
+}
+
+.timeline_wrapper {
+  width: 100%;
+  position: relative;
+  overflow-x: scroll;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { background-color: var(--background-color); }
+  &::-webkit-scrollbar-thumb { border-color: var(--background-color); }
+}
+
+.timeline {
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+
+.timeline_content {
+  position: relative;
+  overflow: visible;
+  height: 100%;
+  width: max-content;
+  background-color: color-mix(in hsl, var(--surface-color) 30%, var(--background-color));
+}
+
+.timestamp {
+  user-select: none;
+  pointer-events: none;
+  position: absolute;
+  top: 0px;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid var(--surface-color);
+  border-right: 1px solid var(--surface-color);
+  display: flex;
+	opacity: 0.5;
+  justify-content: center;
+
+  &.odd { opacity: 0.25; }
+
+  &:not(.odd)::after {
+		position: absolute;
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-small);
+		top: 0;
+    text-align: center;
+    display: block;
+    content: attr(data-frame);
+		font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.clips_track {
+  height: 96px;
+  padding-top: 24px;
+  display: flex;
+  width: max-content;
+
+  .clip {
+    margin-bottom: 32px;
+  }
+}
+
+.audio_track {
+  height: 32px;
+  display: flex;
+  width: max-content;
+}
+
+.clip {
+  --clip-gap: 6px;
+  flex-shrink: 0;
+  position: relative;
+  padding-left: calc(var(--clip-gap) / 2);
+  padding-right: calc(var(--clip-gap) / 2);
+
+  &:first-child { padding-left: calc(var(--clip-gap)); }
+  &:last-child { padding-right: calc(var(--clip-gap)); }
+  &:has(.crop.right) { padding-right: calc(var(--clip-gap) / 2 + 3px); }
+  &:has(.crop.left) { padding-left: calc(var(--clip-gap) / 2 + 3px) };
+  &:first-child:has(.crop.left) { padding-left: calc(var(--clip-gap) + 3px) };
+  &:last-child:has(.crop.right) { padding-right: calc(var(--clip-gap) + 3px) };
+
+  .clip_inner {
+    position: relative;
+    cursor: move;
+    height: 100%;
+
+    .range_select {
+      position: absolute;
+      background-color: var(--theme);
+      width: 3px;
+      height: 100%;
+      top: 0;
+      bottom: 0;
+      border-radius: 0px 4px 4px 0px;
+      opacity: 0;
+
+      &::before {
+        content: '';
+        display: block;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -6px;
+        right: -3px;
+      }
+
+      &:hover {
+        opacity: 1;
+      }
+
+      &.left { transform: scaleX(-1); left: 0; cursor: w-resize; }
+      &.right { right: 0; cursor: e-resize; }
+    }
+
+    .crop.right ~ .range_select.right { right: -4px; }
+    .crop.left ~ .range_select.left { left: -4px; }
+
+    .clip_handle {
+      overflow: hidden;
+      height: 100%;
+      color: var(--surface-color-hover);
+
+      &::before {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: block;
+        content: '';
+        border-radius: var(--radius);
+        background-color: currentColor;
+        transition: background-color 0.15s;
+      }
+
+      .crop {
+        width: 5px;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        color: currentColor;
+
+        &.right { right: -5px; }
+        &.left { left: -5px; transform: scaleX(-1); }
+      }
+
+      &:has(.crop.right)::before {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+
+      &:has(.crop.left)::before {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+
+      &.continuation::before {
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 8px,
+          var(--surface-color-hover) 8px,
+          var(--surface-color-hover) 16px
+        );
+      }
+
+      .container {
+        width: calc(100% - 16px);
+        height: 100%;
+        padding: 0px;
+        margin-left: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+
+        > .label {
+          display: grid;
+        }
+      }
+
+      .name {
+        color: #ffffff99;
+        cursor: pointer;
+        position: relative;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: min-content;
+        padding: 0px 0px;
+        height: 100%;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+  .clip_handle > .label {
+    position: absolute;
+    height: 32px;
+    padding: 2px;
+    cursor: pointer;
+    z-index: 5;
+
+    &::before {
+      content: attr(data-name);
+      display: block;
+      border-radius: 0 14px 14px 14px;
+      padding: 0 8px;
+      font-weight: 500;
+      font-size: 14px;
+      background-color: color-mix(in hsl, white 18%, black);
+      color: color-mix(in hsl, white 40%, black);
+      // border: 2px solid var(--background-color);
+      border: 2px solid color-mix(in hsl, var(--surface-color) 30%, var(--background-color));
+      transition: color 0.15s, background-color 0.15s;
+    }
+
+    &:hover,
+    &:active {
+      &::before {
+        box-shadow: 0 0 0 2px white inset;
+      }
+      z-index: 10;
+    }
+  }
+
+  .label_backdrop {
+    box-sizing: content-box;
+    position: absolute;
+    height: 24px;
+    margin-top: 4px;
+    margin-left: 4px;
+    padding-right: 24px;
+    cursor: pointer;
+    border-radius: 0 0 12px 12px;
+    background-color: color-mix(in hsl, white 4%, transparent);
+    pointer-events: none;
+    transition: color 0.15s, background-color 0.15s;
+  }
+
+  &:hover {
+    z-index: 100;
+
+    .label::before {
+      background-color: var(--theme);
+      color: var(--background-color-dark);
+      font-weight: bold;
+    }
+
+    .label_backdrop {
+      background-color: var(--theme-overlay);
+    }
+
+    .clip_handle {
+      color: color-mix(in hsl, var(--surface-color-hover) 30%, var(--surface-color-light));
+    }
+  }
+
+  .audio_container {
+    display: grid;
+    position: absolute;
+    top: 0;
+  }
+}
+
+.audio_clip {
+
+  .clip_handle::before {
+    color: color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
+  }
+
+  .audio_waveform {
+    padding: 4px;
+    fill: color-mix(in oklab, var(--theme) 20%, transparent);
+  }
+
+  .name {
+    color: color-mix(in oklab, var(--theme) 30%, white) !important;
+    text-shadow: 0px 0px 12px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
+    0px 0px 4px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
+    0px 0px 8px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
+    0px 0px 16px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
+    0px 0px 24px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
+    // font-weight: bold;
+    // background-color: color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
+    padding: 6px 12px 6px 0px !important;
+    // display: block;
+    z-index: 20;
+  }
+}
+
+
+/// OG STYLES
+
+
+.transition {
+  position: absolute;
+  pointer-events: none;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  background: linear-gradient(
+    90deg,
+    rgba(36, 36, 36, 1) 0%,
+    rgba(36, 36, 36, 0) 100%
+  );
+}
+
+.labelTrack {
+  position: relative;
+  height: 32px;
+  padding: 4px 0;
+}
+
+.playhead {
+  position: absolute;
+  width: 2px;
+  top: 6px;
+  bottom: 0;
+  background-color: var(--theme);
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+
+  &::before {
+    display: block;
+    padding: 0 4px;
+    border-radius: var(--radius);
+    background-color: var(--theme);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-small);
+    line-height: 20px;
+    font-weight: bold;
+    color: #000000;
+    content: attr(data-frame);
+  }
+}
+
+.playheadPreview {
+  position: absolute;
+  width: 2px;
+  top: 0;
+  bottom: 0;
+  background-color: white;
+  opacity: 0;
+  pointer-events: none;
+
+  .root:hover & {
+    opacity: 0.16;
+  }
+}
+
+.rangeTrack {
+  height: 32px;
+  cursor: pointer;
+  pointer-events: none;
+
+  &.active {
+    pointer-events: auto;
+  }
+}
+
+.range {
+  border-radius: var(--radius);
+  cursor: move;
+  position: absolute;
+  height: 32px;
+  background-color: var(--surface-color);
+  border: 2px solid var(--surface-color-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+
+  &.active {
+    pointer-events: auto;
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  .rangeTrack.active > & {
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+}
+
+.handle {
+  cursor: pointer;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0);
+
+  .range.active > & {
+    color: rgba(255, 255, 255, 0.24);
+    z-index: 1;
+    min-width: 24px;
+  }
+
+  .range > &:hover,
+  .range > &:active {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+.handleSpacer {
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.audioTrack {
+  position: relative;
+  width: 100%;
+  margin: 24px 0;
+  opacity: 0;
+  transition: opacity var(--duration-normal);
+  pointer-events: none;
+  filter: brightness(0.27);
+
+  &.show {
+    opacity: 1;
+  }
+
+  &.active {
+    pointer-events: auto;
+    cursor: move;
+    filter: brightness(0.32);
+  }
+}
