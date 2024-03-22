@@ -137,107 +137,94 @@ export default function StateManager({ children }: { children: ComponentChildren
 		return 0;
 	}, []);
 
+	const getSceneAndFrameOffset = useCallback((pos: number): [ Scene, number ] => {
+		const clips = clipsStore()?.[0] ?? [];
+		const cache = clipsCache();
+		for (let clip of clips) {
+			let cached = cache.get(clip);
+			if (cached.clipRange[0] <= pos && cached.clipRange[1] >= pos) {
+				return [ cached.scene, (pos - cached.clipRange[0]) ];
+			}
+		}
+	}, []);
+
 	const playheadPos = useSignalish(() => playbackPosStore(), useCallback((pos: number) => {
 		playbackPosStore(pos);
 		rawPlayheadPos(getRawPos(pos));
-		player.requestSeek(rawPlayheadPos());
+		(player as any).requestedSeek = rawPlayheadPos();
 		return pos;
 	}, []));
-
-	const scene = useCurrentScene();
-	scene.
 
 	useLayoutEffect(() => {
 		// Hijack the player's frame changing behaviour.
 
-		const playerAsAny = player as any;
-		const oldReqPrevFrame = playerAsAny.requestPreviousFrame.bind(player);
-		playerAsAny.requestPreviousFrame = () => {
-			console.log('req previous');
-			oldReqPrevFrame();
-		};
+		const p = player as any;
 
-		const unsub = player.onFrameChanged.subscribe((frame) => {
+		p.requestPreviousFrame = () => {
+			console.warn('req prev');
+			playheadPos(playbackPosStore() - p.playback.speed);
+		}
 
-			// If the raw playhead is already at the right frame, this movement was triggered by our code,
-			// and nothing else needs to be done.
+		p.requestNextFrame = () => {
+			console.warn('req next');
+			playheadPos(playbackPosStore() + p.playback.speed);
+		}
 
-			if (rawPlayheadPos() === frame) {
-				console.warn('Playhead moved properly.');
+		p.requestSeek = (frame: number) => {
+			console.warn('req seek');
+			playheadPos(frame);
+		}
+
+		p.requestReset = () => {
+			console.log('req reset');
+			playheadPos(0);
+		}
+
+		p.run = async () => {
+
+			const state = await p.prepare();
+			const previousState = p.playback.state;
+			p.playback.state = state.paused ? PlaybackState.Paused : PlaybackState.Playing;
+
+			if (state.paused) {
+				if (state.render || (state.paused && previousState !== PlaybackState.Paused)) await p.render.dispatch();
+				p.request();
 				return;
 			}
 
-			// If the delta between the last frame and this frame is greater than one, we aren't pressing left / right,
-			// and it's not running our functions (or they're not working.) Throw an error and a stack trace, and attempt
-			// to reset to the playhead pos.
+			const lastFrameAndScene = [ p.playback.currentScene, p.playback.frame - p.playback.currentScene.firstFrame ];
+			playbackPosStore(playbackPosStore() + p.playback.speed);
+			const newRawPos = getRawPos(playbackPosStore());
+			rawPlayheadPos(newRawPos);
+			const newFrameAndScene = getSceneAndFrameOffset(playbackPosStore());
 
-			const diff = frame - rawPlayheadPos();
+			let sceneCurrentFrame = lastFrameAndScene[1];
 
-			console.log(diff);
-
-			if (Math.abs(diff) > 1) {
-				console.error(`Improperly jumped by ${diff} frames! This is probably some editor behaviour that hasn\'t been accounted for yet!`);
-				// playheadPos(0);
-				// rawPlayheadPos(0);
+			if (lastFrameAndScene[0] !== newFrameAndScene[0]) {
+				console.warn('changing scene');
+				p.playback.currentScene.reset();
+				p.playback.currentScene = newFrameAndScene[0];
+				sceneCurrentFrame = 0;
 			}
 
-			// Otherwise, we need to check if the playhead has moved into the last or first frame of a clip,
-			// and move it to the previous or next clip, as appropriate.
-
-			const cache = clipsCache();
-			const currentClip = (clips()?.[0] ?? []).find(clip => {
-				const cached = cache.get(clip);
-				if (!cached) return false;
-				return cached.rawClipRange[0] <= frame + 1 && cached.rawClipRange[1] >= frame;
-			});
-			const cached = cache.get(currentClip);
-
-			const movedToLastFrame = cached?.rawClipRange[1] === frame;
-			const movedToFirstFrame = cached?.rawClipRange[0] === frame + 1;
-
-			playbackPosStore(pos => pos + diff);
-
-			if (movedToLastFrame) {
-				const nextClip = (clips()?.[0] ?? []).find(clip => {
-					const cached = cache.get(clip);
-					if (!cached) return false;
-					return cached.clipRange[0] <= playheadPos() && cached.clipRange[1] >= playheadPos();
-				});
-
-				if (nextClip) {
-					const cached = cache.get(nextClip);
-					rawPlayheadPos(cached.rawClipRange[0]);
-					player.requestSeek(rawPlayheadPos());
-				}
-				else {
-					console.warn('missing next clip!');
-				}
-			}
-			else if (movedToFirstFrame) {
-				const prevClip = (clips()?.[0] ?? []).find(clip => {
-					const cached = cache.get(clip);
-					if (!cached) return false;
-					return cached.clipRange[0] <= playheadPos() && cached.clipRange[1] >= playheadPos();
-				});
-
-				if (prevClip) {
-					const cached = cache.get(prevClip);
-					rawPlayheadPos(cached.rawClipRange[1] - 1);
-					player.requestSeek(rawPlayheadPos());
-				}
-				else {
-					console.warn('missing next clip!');
-				}
-			}
-			else {
-				rawPlayheadPos(getRawPos(playheadPos()));
+			if (sceneCurrentFrame > newFrameAndScene[1]) {
+				console.warn('resetting scene');
+				p.playback.currentScene.reset();
+				sceneCurrentFrame = 0;
 			}
 
+			while (sceneCurrentFrame < newFrameAndScene[1]) {
+				console.warn('incr scene');
+				await p.playback.currentScene.next();
+				sceneCurrentFrame++;
+			}
 
-			console.log(frame, playheadPos(), diff, currentClip, cached);
-		});
+			p.playback.frame = newRawPos;
+			await p.render.dispatch();
+			p.frame.current = p.playback.frame;
 
-		return unsub;
+			p.request();
+		}
 	}, []);
 
 	useEffect(() => {

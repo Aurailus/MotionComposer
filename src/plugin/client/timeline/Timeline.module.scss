@@ -357,8 +357,9 @@
 .playhead {
   position: absolute;
   width: 2px;
-  top: 6px;
+  top: 2px;
   bottom: 0;
+  z-index: 20;
   background-color: var(--theme);
   pointer-events: none;
   display: flex;

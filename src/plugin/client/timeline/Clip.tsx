@@ -71,7 +71,7 @@ function Clip(props: ClipProps) {
 		setRange([ props.range[0], props.range[1] ]);
 	}
 
-	const width = framesToPixels(range[1] - range[0]);
+	const width = framesToPixels(range[1] - range[0] + 1);
 
   return (
     <div

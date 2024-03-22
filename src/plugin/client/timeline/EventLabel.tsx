@@ -22,7 +22,7 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
   const { playheadPos, getClipFrameRange } = useContext(PluginContext);
   const { framesToPixels, pixelsToFrames } = useContext(TimelineContext);
 
-  const startFrame = clip.range[0];
+  const startSec = clip.start;
 
   // How long the event waits for before firing.
   const [ eventTime, setEventTime ] = useState(event.offset);
@@ -97,7 +97,7 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
         class={styles.label}
         data-name={event.name}
         style={{ left: `${framesToPixels(scene.playback.secondsToFrames(
-          event.initialTime + Math.max(0, eventTime)) - offset)}px` }}
+          event.initialTime + Math.max(0, eventTime)) - offset) - 6}px` }}
 
         onDblClick={handleGoToSource}
         onPointerDown={handlePointerDown}
@@ -108,7 +108,7 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
       <div
         className={styles.label_backdrop}
         style={{
-          left: `${framesToPixels(scene.playback.secondsToFrames(event.initialTime) - startFrame - offset)}px`,
+          left: `${framesToPixels(scene.playback.secondsToFrames(event.initialTime - startSec) - offset) - 4}px`,
           width: `${Math.max(0, framesToPixels(scene.playback.secondsToFrames(eventTime)))}px`,
         }}
       />
