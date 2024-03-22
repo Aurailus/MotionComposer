@@ -4,22 +4,22 @@ A (heavily WIP) plugin to add more video editing features to [Motion Canvas](htt
 
 ## Roadmap
 
-- [] Scan '/clips' folder for videos, images, and audio, and add them to the Clips and Media tab.
-  - [] Write a Vite plugin for loading them. It should expose metadata for their lengths, maybe a thumbnail as well, and then allow the file to be publicly accessible over the network.
-- [] Allow dragging clips into the track list.
-- [] Allow cropping clips in in the editor.
-- [] Allow scenes to invoke audio tracks, display waveform embedded in scene.
-- [] Allow modifying audio clip volume.
-- [] Override playback to play in order.
-- [] Dummy scenes to display video and images.
-- [] FFMPEG exporter.
+- [ ] Scan '/clips' folder for videos, images, and audio, and add them to the Clips and Media tab.
+  - [ ] Write a Vite plugin for loading them. It should expose metadata for their lengths, maybe a thumbnail as well, and then allow the file to be publicly accessible over the network.
+- [ ] Allow dragging clips into the track list.
+- [ ] Allow cropping clips in in the editor.
+- [ ] Allow scenes to invoke audio tracks, display waveform embedded in scene.
+- [ ] Allow modifying audio clip volume.
+- [ ] Override playback to play in order.
+- [ ] Dummy scenes to display video and images.
+- [ ] FFMPEG exporter.
 
 ## Stretch Goals
 
-- [] More advanced editor tools: scissor tool, etc.
-- [] Video stabilization and color grading.
-- [] Mute / Solo audio tracks.
-- [] Color clips in the timeline.
+- [ ] More advanced editor tools: scissor tool, etc.
+- [ ] Video stabilization and color grading.
+- [ ] Mute / Solo audio tracks.
+- [ ] Color clips in the timeline.
 
 ## Project Structure
 
