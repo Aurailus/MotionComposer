@@ -1,8 +1,8 @@
 /* @jsxImportSource preact */
 
 import { PluginContext, PluginContextData } from './Context';
-import { ProjectMetadata, Scene, Vector2 } from '@motion-canvas/core';
-import { useApplication, useScenes, useStorage } from '@motion-canvas/ui';
+import { PlaybackState, ProjectMetadata, Scene, Vector2 } from '@motion-canvas/core';
+import { useApplication, useCurrentScene, useScenes, useStorage } from '@motion-canvas/ui';
 import { ComponentChildren } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CachedClipInfo, SerializedClip } from './Types';
@@ -32,6 +32,9 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const clipsCache = useStore<Map<SerializedClip, CachedClipInfo>>(new Map());
 	const sceneSubscriptions = useRef<Map<Scene, (() => void)>>(new Map());
 
+	const playbackPosStore = useStore(0);
+	const rawPlayheadPos = useStore(0);
+
 	/**
 	 * Refresh cached clip data, including frame ranges and scene subscriptions.
 	 * Scene subscriptions are needed to re-call this function when a scene's event timings change,
@@ -41,70 +44,72 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const refreshClipsCache = useCallback(() => {
 		console.warn('REFRESHING CLIPS CACHE');
 
-		let accumulatedLength = 0;
-
 		const hangingScenes = new Set<Scene>([ ...sceneSubscriptions.current.keys() ]);
 
-		const newCache = new Map<SerializedClip, CachedClipInfo>(clips().flatMap(arr => arr.map((clip) => {
-			let scene = clip.type === 'scene' && scenes.find(s => s.name === clip.path) || undefined;
+		const newCache = new Map<SerializedClip, CachedClipInfo>(clips().flatMap((arr) => {
 
-			let frameLength = 0;
-			let rawFrameRange: [ number, number ] | undefined = undefined;
+			let lastEndFrames = -1;
 
-			ensure(clip.range[0] >= 0, 'Clips must have a non-negative start time.');
-			ensure(clip.range[1] >= 0, 'Clips must have a non-negative end time.');
+			return arr.map((clip): [ SerializedClip, CachedClipInfo ] => {
+				let scene = clip.type === 'scene' && scenes.find(s => s.name === clip.path) || undefined;
+				ensure(scene, 'Scene is missing, or tried to cache a non-scene clip.');
 
-			if (clip.type === 'scene') {
-				frameLength = clip.range[1] === 0 ? scene.lastFrame - scene.firstFrame :
-					scene.playback.secondsToFrames(clip.range[1] - clip.range[0]);
+				const offsetFrames = scene.playback.secondsToFrames(clip.offset);
+				const startFrames = scene.playback.secondsToFrames(clip.start);
+				const lengthFrames = scene.playback.secondsToFrames(clip.length);
 
-				if (scene) {
-					const frameRangeIn = scene.playback.secondsToFrames(clip.range[0]);
-					const frameRangeOut = scene.playback.secondsToFrames(clip.range[1]);
-					const rawFrameRange = [ scene.firstFrame + frameRangeIn,
-						frameRangeOut === 0 ? scene.lastFrame : scene.firstFrame + frameRangeOut ];
-					ensure(rawFrameRange[0] >= scene.firstFrame, 'Raw frame range start out of bounds.');
-					ensure(rawFrameRange[1] <= scene.firstFrame + scene.lastFrame, 'Raw frame range end out of bounds.');
-					ensure(rawFrameRange[0] < rawFrameRange[1], 'Raw frame range flipped.');
+				// console.log({ lastEndFrames, offsetFrames, startFrames, lengthFrames })
 
-					if (hangingScenes.has(scene)) {
-						hangingScenes.delete(scene);
-					}
+				ensure(offsetFrames > lastEndFrames, 'Clips must not overlap.');
+				lastEndFrames = offsetFrames + lengthFrames - 1;
 
-					if (!sceneSubscriptions.current.has(scene)) {
-						/** `onCacheChanged` triggers immediately when subscribed, so discard the first call. */
-						let firstTrigger = true;
-						sceneSubscriptions.current.set(scene, scene.onCacheChanged.subscribe(() => {
-							if (firstTrigger) firstTrigger = false;
-							else refreshClipsCache();
-						}));
-					}
+				const sceneRange = [ scene.firstFrame, scene.lastFrame ] as [ number, number ];
+				const rawClipRange = [ sceneRange[0] + 1 + startFrames,
+					sceneRange[0] + 1 + startFrames + lengthFrames ] as [ number, number ];
+				const clipRange = [ offsetFrames, offsetFrames + lengthFrames - 1 ] as [ number, number ];
 
-					hangingScenes.forEach(scene => {
-						sceneSubscriptions.current.get(scene)?.();
-						sceneSubscriptions.current.delete(scene);
-					});
+
+				console.log({ clip, sceneRange, rawClipRange, clipRange })
+
+				ensure(sceneRange[0] >= 0 && sceneRange[1] - sceneRange[0] > 0, 'Scenes frame range invalid.');
+				ensure(startFrames >= 0 && startFrames < sceneRange[1], 'Clip range start out of bounds.');
+				ensure(lengthFrames > 0 && startFrames + lengthFrames < sceneRange[1], 'Clips range length out of bounds.')
+				ensure(rawClipRange[0] > sceneRange[0] && rawClipRange[1] < sceneRange[1], 'Raw clip range out of bounds.');
+				ensure(clipRange[0] >= 0 && clipRange[1] > clipRange[0], 'Clip range invalid.')
+
+				console.log(clip);
+
+				const cached: CachedClipInfo = {
+					clipRange,
+					rawClipRange,
+					sceneRange,
+					scene
+				};
+
+				if (hangingScenes.has(scene)) hangingScenes.delete(scene);
+
+				if (!sceneSubscriptions.current.has(scene)) {
+					/** `onCacheChanged` triggers immediately when subscribed, so discard the first call. */
+					let firstTrigger = true;
+					sceneSubscriptions.current.set(scene, scene.onCacheChanged.subscribe(() => {
+						if (firstTrigger) firstTrigger = false;
+						else refreshClipsCache();
+					}));
 				}
-			}
-			else {
-				ensure(clip.range[1] !== 0, 'Non-scene clips must have an explicit length.');
-				frameLength = player.status.secondsToFrames(clip.range[1] - clip.range[0]);
-			}
 
-			ensure(frameLength > 0, 'Clips must have a positive length.');
+				hangingScenes.forEach(scene => {
+					sceneSubscriptions.current.get(scene)?.();
+					sceneSubscriptions.current.delete(scene);
+				});
 
-			const frameRange: [ number, number ] = [ accumulatedLength, accumulatedLength + frameLength ];
-			accumulatedLength += frameLength;
+				return [
+					clip,
+					cached
+				];
+			});
+		}, 1));
 
-			return [
-				clip,
-				{
-					scene,
-					frameRange,
-					rawFrameRange
-				}
-			];
-		})));
+		console.log(newCache);
 
 		clipsCache(newCache);
 	}, []);
@@ -117,6 +122,124 @@ export default function StateManager({ children }: { children: ComponentChildren
 		return clips;
 	}, []));
 
+	const getRawPos = useCallback((pos: number) => {
+		const clips = clipsStore()?.[0] ?? [];
+		const cache = clipsCache();
+		let posOffset = pos;
+
+		for (let clip of clips) {
+			let cached = cache.get(clip);
+			if (cached.clipRange[0] <= pos && cached.clipRange[1] >= pos) {
+				return cached.rawClipRange[0] + (pos - cached.clipRange[0]);
+			}
+		}
+		console.warn('Couldn\'t find clip!');
+		return 0;
+	}, []);
+
+	const playheadPos = useSignalish(() => playbackPosStore(), useCallback((pos: number) => {
+		playbackPosStore(pos);
+		rawPlayheadPos(getRawPos(pos));
+		player.requestSeek(rawPlayheadPos());
+		return pos;
+	}, []));
+
+	const scene = useCurrentScene();
+	scene.
+
+	useLayoutEffect(() => {
+		// Hijack the player's frame changing behaviour.
+
+		const playerAsAny = player as any;
+		const oldReqPrevFrame = playerAsAny.requestPreviousFrame.bind(player);
+		playerAsAny.requestPreviousFrame = () => {
+			console.log('req previous');
+			oldReqPrevFrame();
+		};
+
+		const unsub = player.onFrameChanged.subscribe((frame) => {
+
+			// If the raw playhead is already at the right frame, this movement was triggered by our code,
+			// and nothing else needs to be done.
+
+			if (rawPlayheadPos() === frame) {
+				console.warn('Playhead moved properly.');
+				return;
+			}
+
+			// If the delta between the last frame and this frame is greater than one, we aren't pressing left / right,
+			// and it's not running our functions (or they're not working.) Throw an error and a stack trace, and attempt
+			// to reset to the playhead pos.
+
+			const diff = frame - rawPlayheadPos();
+
+			console.log(diff);
+
+			if (Math.abs(diff) > 1) {
+				console.error(`Improperly jumped by ${diff} frames! This is probably some editor behaviour that hasn\'t been accounted for yet!`);
+				// playheadPos(0);
+				// rawPlayheadPos(0);
+			}
+
+			// Otherwise, we need to check if the playhead has moved into the last or first frame of a clip,
+			// and move it to the previous or next clip, as appropriate.
+
+			const cache = clipsCache();
+			const currentClip = (clips()?.[0] ?? []).find(clip => {
+				const cached = cache.get(clip);
+				if (!cached) return false;
+				return cached.rawClipRange[0] <= frame + 1 && cached.rawClipRange[1] >= frame;
+			});
+			const cached = cache.get(currentClip);
+
+			const movedToLastFrame = cached?.rawClipRange[1] === frame;
+			const movedToFirstFrame = cached?.rawClipRange[0] === frame + 1;
+
+			playbackPosStore(pos => pos + diff);
+
+			if (movedToLastFrame) {
+				const nextClip = (clips()?.[0] ?? []).find(clip => {
+					const cached = cache.get(clip);
+					if (!cached) return false;
+					return cached.clipRange[0] <= playheadPos() && cached.clipRange[1] >= playheadPos();
+				});
+
+				if (nextClip) {
+					const cached = cache.get(nextClip);
+					rawPlayheadPos(cached.rawClipRange[0]);
+					player.requestSeek(rawPlayheadPos());
+				}
+				else {
+					console.warn('missing next clip!');
+				}
+			}
+			else if (movedToFirstFrame) {
+				const prevClip = (clips()?.[0] ?? []).find(clip => {
+					const cached = cache.get(clip);
+					if (!cached) return false;
+					return cached.clipRange[0] <= playheadPos() && cached.clipRange[1] >= playheadPos();
+				});
+
+				if (prevClip) {
+					const cached = cache.get(prevClip);
+					rawPlayheadPos(cached.rawClipRange[1] - 1);
+					player.requestSeek(rawPlayheadPos());
+				}
+				else {
+					console.warn('missing next clip!');
+				}
+			}
+			else {
+				rawPlayheadPos(getRawPos(playheadPos()));
+			}
+
+
+			console.log(frame, playheadPos(), diff, currentClip, cached);
+		});
+
+		return unsub;
+	}, []);
+
 	useEffect(() => {
 		let cancel: () => void;
 		cancel = player.onDurationChanged.subscribe((duration) => {
@@ -128,11 +251,11 @@ export default function StateManager({ children }: { children: ComponentChildren
 	}, []);
 
 	const getClipFrameRange = useCallback((clip: SerializedClip) => {
-		return clipsCache().get(clip).frameRange;
+		return clipsCache().get(clip).clipRange;
 	}, []);
 
 	const getClipRawFrameRange = useCallback((clip: SerializedClip) => {
-		return clipsCache().get(clip).rawFrameRange;
+		return clipsCache().get(clip).rawClipRange;
 	}, []);
 
 	const getClipScene = useCallback((clip: SerializedClip) => {
@@ -150,7 +273,10 @@ export default function StateManager({ children }: { children: ComponentChildren
 		getClipFrameRange,
 		getClipRawFrameRange,
 		getClipScene,
-		getSceneFrameLength
+		getSceneFrameLength,
+		playheadPos,
+		rawPlayheadPos,
+		getRawPos
 	};
 
 	return (

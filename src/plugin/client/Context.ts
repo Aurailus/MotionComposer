@@ -4,6 +4,7 @@ import { SerializedClip } from './Types';
 import { Scene } from '@motion-canvas/core';
 
 export interface PluginContextData {
+	/** All of the clips in the scene. Index 0 is video, everything else is audio. */
 	clips: Signalish<readonly SerializedClip[][]>;
 
 	/** Called by the media tab -- hides the timeline media pane if the media tab is open. */
@@ -20,6 +21,15 @@ export interface PluginContextData {
 
 	/** Returns the frame length of a scene. */
 	getSceneFrameLength(scene: Scene): number;
+
+	/** The playhead's position in the Motion Composer timeline. */
+	playheadPos: Signalish<number>;
+
+	/** The playhead's position in the raw Motion Canvas project. */
+	rawPlayheadPos: Signalish<number>;
+
+	/** Get a raw timeline position from a motion composer timeline position. */
+	getRawPos(pos: number): number;
 }
 
 export const PluginContext = createContext<PluginContextData>({} as PluginContextData);

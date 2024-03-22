@@ -19,7 +19,7 @@ interface EventLabelProps {
 
 export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabelProps) {
   const { player } = useApplication();
-  const { getClipFrameRange } = useContext(PluginContext);
+  const { playheadPos, getClipFrameRange } = useContext(PluginContext);
   const { framesToPixels, pixelsToFrames } = useContext(TimelineContext);
 
   const startFrame = clip.range[0];
@@ -36,9 +36,8 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
     await findAndOpenFirstUserFile(event.stack);
   }
 
-  // TODO: This should seek in the StateManager.
   function handleSeek() {
-    player.requestSeek(scene.firstFrame + player.status.secondsToFrames(event.initialTime + event.offset));
+    playheadPos(getClipFrameRange(clip)[0] + player.status.secondsToFrames(event.initialTime + event.offset));
   }
 
   async function handlePointerDown(e: PointerEvent) {

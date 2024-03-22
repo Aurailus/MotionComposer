@@ -5,9 +5,12 @@ import styles from './Timeline.module.scss';
 
 import ClipsTrack from './ClipsTrack';
 import AudioTrack from './AudioTrack';
+import { useSignal } from '@preact/signals';
 import { TimelineContext, TimelineContextData } from './TimelineContext';
 import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
 import { Timestamps } from './Timestamps';
+import { Playhead } from './Playhead';
+import { useSignalish } from '../Signalish';
 
 const ZOOM_SPEED = 0.1;
 
@@ -30,6 +33,8 @@ export default function Timeline() {
 	const tracksRef = useRef<HTMLDivElement>();
 	const wrapperRef = useRef<HTMLDivElement>();
 	const rect = useSize(wrapperRef);
+
+	const seeking = useSignal<number | null>(null);
 
 	/** Loaded the scene information. */
 	const isReady = duration > 0;
@@ -172,6 +177,7 @@ export default function Timeline() {
 								left: `${sizes.paddingLeft}px` }}
 						>
 							<Timestamps/>
+							<Playhead seeking={seeking}/>
 							<ClipsTrack/>
 							<AudioTrack/>
 						</div>
