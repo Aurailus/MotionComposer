@@ -7,6 +7,7 @@ A (heavily WIP) plugin to add more video editing features to [Motion Canvas](htt
 - [ ] Scan '/clips' folder for videos, images, and audio, and add them to the Clips and Media tab.
   - [ ] Write a Vite plugin for loading them. It should expose metadata for their lengths, maybe a thumbnail as well, and then allow the file to be publicly accessible over the network.
 - [ ] Allow dragging clips into the track list.
+  - [ ] Show a warning scene if a clip's source is missing.
 - [ ] Allow cropping and moving clips in in the editor.
   - [ ] Dragging the edges of a clip should crop it, snapping to scene edges and frame boundaries, but overlapping if necessary.
   - [ ] Dragging the edges of a clip while holding shift should remove snapping.
@@ -20,7 +21,7 @@ A (heavily WIP) plugin to add more video editing features to [Motion Canvas](htt
   - [ ] Fix transitions.
   - [ ] Fix play bar position and frame counts.
   - [ ] Check if modifying a scene fucks things up.
-  - [ ] Make sure having no scene works.
+  - [x] Make sure having no scene works.
 - [ ] Dummy scenes to display video and images.
 - [ ] FFMPEG exporter.
 

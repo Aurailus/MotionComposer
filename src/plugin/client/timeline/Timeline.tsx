@@ -1,16 +1,19 @@
 /* @jsxImportSource preact */
 
-import { clamp, useDuration, usePreviewSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
+import { MouseButton, MouseMask, clamp, labelClipDraggingLeftSignal, useApplication, useDuration, usePreviewSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
 import styles from './Timeline.module.scss';
 
 import ClipsTrack from './ClipsTrack';
 import AudioTrack from './AudioTrack';
 import { useSignal } from '@preact/signals';
 import { TimelineContext, TimelineContextData } from './TimelineContext';
-import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
+import { useLayoutEffect, useMemo, useRef, useContext } from 'preact/hooks';
 import { Timestamps } from './Timestamps';
 import { Playhead } from './Playhead';
 import { useSignalish } from '../Signalish';
+import { RangeSelector } from './RangeSelector';
+import { wrapper } from '@motion-canvas/2d';
+import { PluginContext } from '../Context';
 
 const ZOOM_SPEED = 0.1;
 
@@ -27,12 +30,16 @@ const ZOOM_START_THRESHOLD = 48;
 export default function Timeline() {
 	const [ scale, setScale ] = useStorage('timeline-scale', 1);
 	const [ offset, setOffset ] = useStorage('timeline-offset', 0);
+	const { userRange, playheadPos } = useContext(PluginContext);
+	const { player } = useApplication();
 	const { fps } = usePreviewSettings();
 
 	const duration = useDuration();
 	const tracksRef = useRef<HTMLDivElement>();
 	const wrapperRef = useRef<HTMLDivElement>();
+	const playheadRef = useRef<HTMLDivElement>();
 	const rect = useSize(wrapperRef);
+	const rangeRef = useRef<HTMLDivElement>();
 
 	const seeking = useSignal<number | null>(null);
 
@@ -146,10 +153,82 @@ export default function Timeline() {
 		if (!isNaN(newScale)) setScale(newScale);
 		if (!isNaN(newOffset)) setOffset(newOffset);
 
-		// playheadRef.current.style.left = `${
-		// 	event.x - rect.x + newOffset
-		// }px`;
+		playheadRef.current.style.left = `${evt.x - rect.x + newOffset}px`;
 	};
+
+	function scrub(pos: number) {
+    const frame = Math.floor(state.pointerToFrames(pos));
+		const minFrame = player.status.secondsToFrames(userRange.value[0]);
+		const maxFrame = player.status.secondsToFrames(userRange.value[1]);
+
+    seeking.value = clamp(minFrame, maxFrame, frame);
+		console.log(frame, playheadPos());
+    if (playheadPos() !== frame) player.requestSeek(frame);
+
+    // const isInUserRange = player.isInUserRange(frame);
+    // const isOutOfRange = player.isInRange(frame) && !isInUserRange;
+    // if (!warnedAboutRange.current && !reduceMotion && isOutOfRange) {
+    //   warnedAboutRange.current = true;
+    //   rangeRef.current?.animate(borderHighlight(), {
+    //     duration: 200,
+    //   });
+    // }
+
+    // if (isInUserRange) {
+    //   warnedAboutRange.current = false;
+    // }
+	}
+
+	function handleScrubStart(evt: PointerEvent) {
+		if (evt.button === MouseButton.Left) {
+			evt.preventDefault();
+			(evt.currentTarget as any).setPointerCapture(evt.pointerId);
+			playheadRef.current.style.display = 'none';
+			scrub(evt.x);
+		}
+		else if (evt.button === MouseButton.Middle) {
+			evt.preventDefault();
+			(evt.currentTarget as any).setPointerCapture(evt.pointerId);
+			wrapperRef.current.style.cursor = 'grabbing';
+			playheadRef.current.style.display = 'none';
+		}
+	}
+
+	function handleScrubMove(evt: PointerEvent) {
+		if ((evt.currentTarget as any).hasPointerCapture(evt.pointerId)) {
+			if (evt.buttons & MouseMask.Primary) {
+				scrub(evt.x);
+			}
+			else if (evt.buttons & MouseMask.Auxiliary) {
+				const newOffset = clamp(
+					0,
+					sizes.playableLength,
+					offset - evt.movementX,
+				);
+				setOffset(newOffset);
+				wrapperRef.current.scrollLeft = newOffset;
+			}
+		}
+		else if (labelClipDraggingLeftSignal.value === null) {
+			playheadRef.current.style.left = `${evt.x - rect.x + offset}px`;
+		}
+	}
+
+	function handleScrubEnd(evt: PointerEvent) {
+		if (labelClipDraggingLeftSignal.value === null) {
+			playheadRef.current.style.left = `${evt.x - rect.x + offset}px`;
+		}
+		if (
+			evt.button === MouseButton.Left ||
+			evt.button === MouseButton.Middle
+		) {
+			seeking.value = null;
+			// warnedAboutRange.current = false;
+			(evt.currentTarget as any).releasePointerCapture(evt.pointerId);
+			wrapperRef.current.style.cursor = '';
+			playheadRef.current.style.display = '';
+		}
+	}
 
 	return (
 		<TimelineContext.Provider value={state}>
@@ -165,6 +244,9 @@ export default function Timeline() {
 					class={styles.timeline_wrapper}
 					onScroll={handleScroll}
 					onWheel={handleWheel}
+					onPointerDown={handleScrubStart}
+					onPointerMove={handleScrubMove}
+					onPointerUp={handleScrubEnd}
 				>
 					<div
 						class={styles.timeline}
@@ -176,10 +258,12 @@ export default function Timeline() {
 								// width: `${sizes.playableLength}px`,
 								left: `${sizes.paddingLeft}px` }}
 						>
+							<RangeSelector rangeRef={rangeRef}/>
 							<Timestamps/>
 							<Playhead seeking={seeking}/>
 							<ClipsTrack/>
 							<AudioTrack/>
+							<div class={styles.scrub_line} ref={playheadRef}/>
 						</div>
 					</div>
 				</div>

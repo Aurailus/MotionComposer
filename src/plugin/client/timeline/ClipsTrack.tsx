@@ -12,11 +12,13 @@ import { MissingClip, SceneClip } from './Clip';
 export default function SceneTrack() {
   const scenes = useScenes();
   const ctx = useContext(PluginContext);
-
+  const { framesToPixels } = useContext(TimelineContext);
+  const { player } = useApplication();
   const clips = ctx.clips();
 
   return (
-    <div className={styles.clips_track}>
+    <div className={styles.clips_track}
+    style={{ width: framesToPixels(player.status.secondsToFrames(ctx.range.value[1])) }}>
       {(clips[0] ?? []).map(clip => {
         const range = ctx.getClipFrameRange(clip);
 

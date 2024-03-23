@@ -2,7 +2,7 @@
 
 import { Signal } from '@preact/signals';
 import { useContext } from 'preact/hooks';
-import { usePlayerState, usePlayerTime } from '@motion-canvas/ui';
+import { usePlayerState } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 

@@ -9,11 +9,17 @@ import { MetaField, MetaFile, ProjectMetadata } from '@motion-canvas/core';
 
 // console.log(videos);
 
+import MissingClipScene from './MissingClipScene?scene';
+import EmptyTimelineScene from './EmptyTimelineScene?scene';
+
 export default makeEditorPlugin({
 	name: 'motion-composer',
 	previewOverlay: TrackBarOverlayConfig,
 	tabs: [ MediaTabConfig ],
 	provider: StateManager,
 	project(project) {
+		project.scenes.push(EmptyTimelineScene);
+		project.scenes.push(MissingClipScene);
+		return project;
 	}
 })

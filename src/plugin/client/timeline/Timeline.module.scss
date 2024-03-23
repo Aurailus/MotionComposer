@@ -89,10 +89,9 @@
 }
 
 .clips_track {
-  height: 96px;
-  padding-top: 24px;
-  display: flex;
-  width: max-content;
+  height: 72px;
+  position: relative;
+  margin-top: 4px;
 
   .clip {
     margin-bottom: 32px;
@@ -108,7 +107,9 @@
 .clip {
   --clip-gap: 6px;
   flex-shrink: 0;
-  position: relative;
+  position: absolute;
+  top: 0;
+  bottom: 0;
   padding-left: calc(var(--clip-gap) / 2);
   padding-right: calc(var(--clip-gap) / 2);
 
@@ -121,8 +122,12 @@
 
   .clip_inner {
     position: relative;
-    cursor: move;
+    cursor: grab;
     height: 100%;
+
+    &:active {
+      cursor: grabbing;
+    }
 
     .range_select {
       position: absolute;
@@ -243,6 +248,10 @@
     cursor: pointer;
     z-index: 5;
 
+    &:active {
+      cursor: grabbing;
+    }
+
     &::before {
       content: attr(data-name);
       display: block;
@@ -357,92 +366,70 @@
   }
 }
 
-/// OG STYLES
-
-.playheadPreview {
+.scrub_line {
   position: absolute;
   width: 2px;
   top: 0;
   bottom: 0;
   background-color: white;
   opacity: 0;
+  z-index: 40;
   pointer-events: none;
 
-  .root:hover & {
-    opacity: 0.16;
+  .timeline:hover & {
+    opacity: 0.05;
   }
 }
 
-.rangeTrack {
-  height: 32px;
+.range_track {
+  height: 24px;
   cursor: pointer;
-  pointer-events: none;
 
-  &.active {
-    pointer-events: auto;
+  &:active .handle {
+    fill: transparent !important;
+  }
+
+  .range {
+    border-radius: var(--radius);
+    cursor: grab;
+    position: absolute;
+    height: 24px;
+    background-color: rgba(255,255,255,0.03);
+    border: 2px solid var(--surface-color-light);
+    display: flex;
+    z-index: 5;
+    align-items: center;
+    justify-content: center;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &:is(:hover,:active):not(:has(.handle:active)) .handle {
+    fill: rgba(255,255,255,0.3);
+  }
+
+  .handle {
+    color: rgba(255, 255, 255, 0);
+    width: 20px;
+    height: 20px;
+
+    .range.active > & {
+      color: rgba(255, 255, 255, 0.24);
+      z-index: 1;
+      min-width: 24px;
+    }
+
+    .range > &:hover,
+    .range > &:active {
+      color: rgba(255, 255, 255, 0.6);
+    }
   }
 }
 
-.range {
-  border-radius: var(--radius);
-  cursor: move;
-  position: absolute;
-  height: 32px;
-  background-color: var(--surface-color);
-  border: 2px solid var(--surface-color-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-
-  &.active {
-    pointer-events: auto;
-    border-color: rgba(255, 255, 255, 0.24);
-  }
-
-  .rangeTrack.active > & {
-    border-color: rgba(255, 255, 255, 0.24);
-  }
-}
-
-.handle {
-  cursor: pointer;
-  margin-top: 2px;
-  color: rgba(255, 255, 255, 0);
-
-  .range.active > & {
-    color: rgba(255, 255, 255, 0.24);
-    z-index: 1;
-    min-width: 24px;
-  }
-
-  .range > &:hover,
-  .range > &:active {
-    color: rgba(255, 255, 255, 0.6);
-  }
-}
 
 .handleSpacer {
   flex-grow: 1;
   flex-shrink: 1;
-}
-
-.audioTrack {
-  position: relative;
-  width: 100%;
-  margin: 24px 0;
-  opacity: 0;
-  transition: opacity var(--duration-normal);
-  pointer-events: none;
-  filter: brightness(0.27);
-
-  &.show {
-    opacity: 1;
-  }
-
-  &.active {
-    pointer-events: auto;
-    cursor: move;
-    filter: brightness(0.32);
-  }
 }

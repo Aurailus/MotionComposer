@@ -77,7 +77,7 @@ function Clip(props: ClipProps) {
   return (
     <div
       class={[ styles.clip, (props.class ?? '').split(' ') ].join(' ')}
-      style={{ width: `${width}px` }}
+      style={{ width: `${width}px`, left: `${framesToPixels(range[0])}px` }}
     >
 			<div class={styles.clip_inner}>
 				<div

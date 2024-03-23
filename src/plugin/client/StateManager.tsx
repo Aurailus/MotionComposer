@@ -1,5 +1,6 @@
 /* @jsxImportSource preact */
 
+import { useSignal } from '@preact/signals';
 import { PluginContext, PluginContextData } from './Context';
 import { PlaybackState, ProjectMetadata, Scene, Vector2 } from '@motion-canvas/core';
 import { useApplication, useCurrentScene, useScenes, useStorage } from '@motion-canvas/ui';
@@ -34,6 +35,9 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 	const playbackPosStore = useStore(0);
 	const rawPlayheadPos = useStore(0);
+
+	const range = useSignal<[ number, number ]>([ 0, 0 ]);
+	const userRange = useSignal<[ number, number ]>([ 0, 0 ]);
 
 	/**
 	 * Refresh cached clip data, including frame ranges and scene subscriptions.
@@ -109,7 +113,13 @@ export default function StateManager({ children }: { children: ComponentChildren
 			});
 		}, 1));
 
-		// console.log(newCache);
+		let endTime = 0;
+		clips().forEach(ch => ch.forEach(c => endTime = Math.max(endTime, c.offset + c.length)));
+
+		const userRangeAtEnd = userRange.value[1] === range.value[1];
+		range.value = [ 0, endTime ];
+		if (userRangeAtEnd) userRange.value = [ 0, endTime ];
+		else userRange.value = [ userRange.value[0], Math.min(userRange.value[1], range.value[1]) ];
 
 		clipsCache(newCache);
 	}, []);
@@ -133,8 +143,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 				return cached.rawClipRange[0] + (pos - cached.clipRange[0]);
 			}
 		}
-		console.warn('Couldn\'t find clip!');
-		return 0;
+
+		return -1;
 	}, []);
 
 	const getSceneAndFrameOffset = useCallback((pos: number): [ Scene, number ] => {
@@ -180,9 +190,31 @@ export default function StateManager({ children }: { children: ComponentChildren
 			playheadPos(0);
 		}
 
+		/** Override range methods to properly loop the scene and detect finished states. */
+
+		player.isInRange = () => {
+			const timeInSeconds = player.status.framesToSeconds(playheadPos());
+			return timeInSeconds >= 0 && timeInSeconds < range.value[1];
+		}
+
+		player.isInUserRange = () => {
+			const timeInSeconds = player.status.framesToSeconds(playheadPos());
+			return timeInSeconds >= userRange.value[0] && timeInSeconds < userRange.value[1];
+		}
+
+		Object.defineProperty(player, "finished", {
+			get() { return playback.finished || playheadPos() >= player.status.secondsToFrames(userRange.value[1]); }
+		});
+
+
+
+		// The big boi, override the playback manager's next state to properly coordinate the scenes.
+
 		const playback = player.playback;
 
-		/** The big boi, override the playback manager's next state to properly coordinate the scenes. */
+		const emptyTimelineScene = scenes.find(s => s.name === 'EmptyTimelineScene');
+		ensure(emptyTimelineScene, 'EmptyTimelineScene not found.');
+
 		(player.playback as any).next = async () => {
 			// Animate the previous scene transition if it exists, and the current scene is still running.
 			if (playback.previousScene) {
@@ -193,55 +225,67 @@ export default function StateManager({ children }: { children: ComponentChildren
 			}
 
 			playbackPosStore(pos => pos + playback.speed);
-			rawPlayheadPos(getRawPos(playbackPosStore()));
+			const wasEmpty = rawPlayheadPos() === -1;
+			const rawPos = getRawPos(playbackPosStore());
+			const empty = rawPos === -1;
+			rawPlayheadPos(empty ? emptyTimelineScene.firstFrame : rawPos);
 
-			const scene = (playback as any).findBestScene(rawPlayheadPos());
-
-			if (scene !== playback.currentScene) {
-				playback.currentScene = scene;
-				await playback.currentScene.reset(playback.previousScene);
-				playback.frame = playback.currentScene.firstFrame;
+			// Reset and render the empty scene.
+			if (!wasEmpty && empty) {
+				playback.currentScene = emptyTimelineScene;
+				await emptyTimelineScene.reset(emptyTimelineScene);
+				await emptyTimelineScene.next();
+				return false;
 			}
-			else if (playback.frame > rawPlayheadPos()) {
-				console.warn('reset');
-				await playback.currentScene.reset(playback.currentScene);
-				playback.frame = playback.currentScene.firstFrame;
-			}
+			else {
+				const scene = (playback as any).findBestScene(rawPlayheadPos());
 
-			while (playback.frame < rawPlayheadPos()) {
-				await playback.currentScene.next();
-				playback.frame += playback.speed;
-			}
-
-			/** Return true if the scene is finished, stopping execution. */
-			if (playback.currentScene.isFinished()) {
-				return true;
-			}
-
-			// If we're done animating the current scene's transition and the previous scene still exists,
-			// remove the previous scene, as we don't need to transition it anymore.
-			if (playback.previousScene && playback.currentScene.isAfterTransitionIn()) {
-				playback.previousScene = null;
-			}
-
-			// If the current scene is done, or can transition, move it to the previous scene,
-			// get the next scene, set it as the current scene and reset it. If it doesn't exist,
-			// or if it doesn't animate, immediately discard the previous scene.
-
-			if (playback.currentScene.canTransitionOut()) {
-				playback.previousScene = playback.currentScene;
-				const nextScene = (playback as any).getNextScene(playback.previousScene);
-				if (nextScene) {
-					playback.currentScene = nextScene;
+				if (scene !== playback.currentScene) {
+					playback.currentScene = scene;
 					await playback.currentScene.reset(playback.previousScene);
+					playback.frame = playback.currentScene.firstFrame;
 				}
-				if (!nextScene || playback.currentScene.isAfterTransitionIn()) {
+				else if (playback.frame > rawPlayheadPos()) {
+					console.warn('reset');
+					await playback.currentScene.reset(playback.currentScene);
+					playback.frame = playback.currentScene.firstFrame;
+				}
+
+				while (playback.frame < rawPlayheadPos()) {
+					await playback.currentScene.next();
+					playback.frame += playback.speed;
+				}
+
+				/** Return true if the scene is finished, stopping execution. */
+				if (playback.currentScene.isFinished()) {
+					return true;
+				}
+
+				// If we're done animating the current scene's transition and the previous scene still exists,
+				// remove the previous scene, as we don't need to transition it anymore.
+				if (playback.previousScene && playback.currentScene.isAfterTransitionIn()) {
 					playback.previousScene = null;
 				}
-			}
 
-			// Return the current scene.
-			return playback.currentScene.isFinished();
+				// If the current scene is done, or can transition, move it to the previous scene,
+				// get the next scene, set it as the current scene and reset it. If it doesn't exist,
+				// or if it doesn't animate, immediately discard the previous scene.
+
+				if (playback.currentScene.canTransitionOut()) {
+					playback.previousScene = playback.currentScene;
+					const nextScene = (playback as any).getNextScene(playback.previousScene);
+					if (nextScene) {
+						playback.currentScene = nextScene;
+						await playback.currentScene.reset(playback.previousScene);
+					}
+					if (!nextScene || playback.currentScene.isAfterTransitionIn()) {
+						playback.previousScene = null;
+					}
+				}
+
+				// Return the current scene.
+				return playback.currentScene.isFinished();
+			}
 		}
 	}, []);
 
@@ -275,6 +319,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const ctx: PluginContextData = {
 		handleMediaTabVisibilityChange: setMediaTabVisible,
 		clips,
+		range,
+		userRange,
 		getClipFrameRange,
 		getClipRawFrameRange,
 		getClipScene,

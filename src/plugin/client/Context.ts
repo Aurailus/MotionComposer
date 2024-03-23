@@ -1,11 +1,18 @@
+import { Signal } from '@preact/signals';
 import { createContext } from 'preact';
 import { Signalish } from './Signalish';
 import { SerializedClip } from './Types';
-import { Scene } from '@motion-canvas/core';
+import { Scene, Subscribable } from '@motion-canvas/core';
 
 export interface PluginContextData {
 	/** All of the clips in the scene. Index 0 is video, everything else is audio. */
 	clips: Signalish<readonly SerializedClip[][]>;
+
+	/** The length of the project in frames. */
+	range: Signal<[ number, number ]>;
+
+	/** The length of the user-selected playback range in frames.  */
+	userRange: Signal<[ number, number ]>;
 
 	/** Called by the media tab -- hides the timeline media pane if the media tab is open. */
 	handleMediaTabVisibilityChange: (visible: boolean) => void;
