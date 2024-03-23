@@ -1,0 +1,19 @@
+.timeline_overlay {
+	position: fixed;
+	z-index: 1000;
+	bottom: 28px;
+	left: 52px;
+	right: 0;
+	overflow: hidden;
+	display: grid;
+}
+
+.playback_overlay {
+	position: fixed;
+	z-index: 1000;
+	right: 2px;
+	height: 50px;
+	overflow: hidden;
+	display: grid;
+	pointer-events: none;
+}

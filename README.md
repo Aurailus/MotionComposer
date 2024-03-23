@@ -17,8 +17,8 @@ A (heavily WIP) plugin to add more video editing features to [Motion Canvas](htt
 - [ ] Allow scenes to invoke audio tracks, display waveform embedded in scene.
 - [ ] Allow modifying audio clip volume.
 - [x] Override playback to play in order.
-  - [ ] Fix scene end detection.
-  - [ ] Fix transitions.
+  - [x] Fix scene end detection.
+  - [ ] Fix playback range behaviour.
   - [ ] Fix play bar position and frame counts.
   - [ ] Check if modifying a scene fucks things up.
   - [x] Make sure having no scene works.

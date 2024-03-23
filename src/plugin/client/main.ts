@@ -1,7 +1,7 @@
 import { makeEditorPlugin } from '@motion-canvas/ui';
 
 import { MediaTabConfig } from './media/MediaTabConfig';
-import { TrackBarOverlayConfig } from './timeline/TimelineOverlayConfig';
+import { OverlayConfig } from './OverlayConfig';
 import StateManager from './StateManager';
 import { MetaField, MetaFile, ProjectMetadata } from '@motion-canvas/core';
 
@@ -14,7 +14,7 @@ import EmptyTimelineScene from './EmptyTimelineScene?scene';
 
 export default makeEditorPlugin({
 	name: 'motion-composer',
-	previewOverlay: TrackBarOverlayConfig,
+	previewOverlay: OverlayConfig,
 	tabs: [ MediaTabConfig ],
 	provider: StateManager,
 	project(project) {

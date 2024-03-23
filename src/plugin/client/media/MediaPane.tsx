@@ -35,7 +35,9 @@ export default function MediaPane() {
   const scenes = useScenes();
 
 	const allMedia = ([
-		...scenes.map(s => [ `\\scene\\${s.name}`, <SceneItem key={`\\scene\\${s.name}`} scene={s}/> ])
+		...scenes
+		.filter(s => s.name !== 'MissingClipScene' && s.name !== 'EmptyTimelineScene')
+		.map(s => [ `\\scene\\${s.name}`, <SceneItem key={`\\scene\\${s.name}`} scene={s}/> ])
 	] as [ string, VNode ][])
 		.sort((a, b) => a[0].localeCompare(b[0]))
 		.map(([_, v]) => v);

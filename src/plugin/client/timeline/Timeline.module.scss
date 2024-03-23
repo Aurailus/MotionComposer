@@ -1,13 +1,3 @@
-.overlay {
-	position: fixed;
-	z-index: 1000;
-	bottom: 28px;
-	left: 52px;
-	right: 0;
-	overflow: hidden;
-	display: grid;
-}
-
 .timeline {
 	background-color: var(--background-color);
 	overflow: hidden;
