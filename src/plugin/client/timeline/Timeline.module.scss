@@ -331,35 +331,12 @@
   }
 }
 
-
-/// OG STYLES
-
-
-.transition {
-  position: absolute;
-  pointer-events: none;
-  top: 0;
-  bottom: 0;
-  left: -4px;
-  background: linear-gradient(
-    90deg,
-    rgba(36, 36, 36, 1) 0%,
-    rgba(36, 36, 36, 0) 100%
-  );
-}
-
-.labelTrack {
-  position: relative;
-  height: 32px;
-  padding: 4px 0;
-}
-
 .playhead {
   position: absolute;
   width: 2px;
   top: 2px;
   bottom: 0;
-  z-index: 20;
+  z-index: 200;
   background-color: var(--theme);
   pointer-events: none;
   display: flex;
@@ -368,8 +345,8 @@
 
   &::before {
     display: block;
-    padding: 0 4px;
-    border-radius: var(--radius);
+    padding: 0 6px;
+    border-radius: 100px;
     background-color: var(--theme);
     font-family: var(--font-family-mono);
     font-size: var(--font-size-small);
@@ -379,6 +356,8 @@
     content: attr(data-frame);
   }
 }
+
+/// OG STYLES
 
 .playheadPreview {
   position: absolute;

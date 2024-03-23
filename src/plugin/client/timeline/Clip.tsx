@@ -15,6 +15,7 @@ import clsx from 'clsx';
 interface ClipProps {
 	clip: SerializedClip;
 	range: [ number, number ];
+	cropped: [ boolean, boolean ];
 	class?: string;
 
 	children?: ComponentChildren | ((range: [ number, number ]) => ComponentChildren);
@@ -93,12 +94,12 @@ function Clip(props: ClipProps) {
 
 					{typeof props.children === 'function' ? props.children(range) : props.children}
 
-					{props.clip.range[0] !== 0 && <svg class={clsx(styles.crop, styles.left)}
+					{props.cropped[0] && <svg class={clsx(styles.crop, styles.left)}
 						width={5} height={40} viewBox='0 0 1.3291207 10.5'>
 						<path fill='currentColor' d='M 1.3291178,10.583333 2.8541667e-8,9.2562824 1.317749,7.9385334 2.8541667e-8,6.6207843 1.3291178,5.2916666 2.8541667e-8,3.9646158 1.317749,2.6468668 2.8541667e-8,1.3291178 1.3291178,0 h -2.3874511 v 10.583333 z'/>
 					</svg>}
 
-					{props.clip.range[1] !== 0 && <svg class={clsx(styles.crop, styles.right)}
+					{props.cropped[1] && <svg class={clsx(styles.crop, styles.right)}
 						width={5} height={40} viewBox='0 0 1.3291207 10.5'>
 						<path fill='currentColor' d='M 1.3291178,10.583333 2.8541667e-8,9.2562824 1.317749,7.9385334 2.8541667e-8,6.6207843 1.3291178,5.2916666 2.8541667e-8,3.9646158 1.317749,2.6468668 2.8541667e-8,1.3291178 1.3291178,0 h -2.3874511 v 10.583333 z'/>
 					</svg>}
@@ -139,6 +140,8 @@ export function SceneClip({ scene, clip, range }: SceneClipProps) {
     <Clip
 			clip={clip}
 			range={range}
+			cropped={[ clip.start !== 0,
+				clip.start + clip.length < player.status.framesToSeconds(scene.lastFrame - scene.firstFrame) ]}
 			labelChildren={
 				<div className={styles.name} title='Go to source'
 					onPointerDown={e => e.stopPropagation()}
