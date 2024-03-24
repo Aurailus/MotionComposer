@@ -206,7 +206,104 @@ export default function StateManager({ children }: { children: ComponentChildren
 			get() { return playback.finished || playheadPos() >= player.status.secondsToFrames(userRange.value[1]); }
 		});
 
+		(player as any).prepare = () => ensure(false, 'Player.prepare was called!');
 
+		// The bigger boi, override the player to seek good and whatever.
+
+		(player as any).run = async () => {
+			const state = {
+				...(player as any).playerState.current,
+				seek: (player as any).requestedSeek,
+				render: (player as any).requestedRender,
+			};
+			(player as any).requestedSeek = -1;
+			(player as any).requestedRender = false;
+
+			// Recalculate the project if necessary.
+			if ((player as any).requestedRecalculation) {
+				if (state.seek < 0) state.seek = player.playback.frame;
+
+				try {
+					await player.playback.recalculate();
+					(player as any).duration.current = player.playback.frame;
+					(player as any).recalculated.dispatch();
+				}
+				catch (e) {
+					(player as any).requestedSeek = state.seek;
+					throw e;
+				}
+				finally {
+					(player as any).requestedRecalculation = false;
+				}
+			}
+
+			// Pause if reached the end of the playback range and we're not looping.
+			// Set the seek point to the beginning of the range, so that when we play again, it starts from the beginning.
+			if ((player as any).finished && !state.paused && state.seek < 0) {
+				if (!state.loop) {
+					player.togglePlayback(false);
+					state.paused = true;
+				}
+				state.seek = getRawPos(range.value[0]);
+			}
+
+			const previousState = player.playback.state;
+			player.playback.state = state.paused ? PlaybackState.Paused : PlaybackState.Playing;
+
+			// TODO: playback manager should make sure playhead is in frame range when it updates.
+
+			// Seek to the requested frame.
+			if (state.seek >= 0) {
+				player.logger.profile('seek time');
+				console.log(state.seek, playback.frame)
+
+				if (state.seek <= playback.frame ||
+					(playback.currentScene.isCached() && playback.currentScene.lastFrame < state.seek)) {
+					const scene = (playback as any).findBestScene(state.seek);
+					if (scene !== playback.currentScene) {
+						console.warn('reset a');
+						playback.previousScene = null;
+						playback.currentScene = scene;
+						playback.frame = playback.currentScene.firstFrame;
+						await playback.currentScene.reset();
+					}
+					else if (state.seek <= playback.frame) {
+						console.warn('reset b');
+						playback.previousScene = null;
+						playback.frame = playback.currentScene.firstFrame;
+						await playback.currentScene.reset();
+					}
+					console.warn('reset c');
+				}
+
+				playback.finished = false;
+				// while (playback.frame < state.seek && !playback.finished) {
+				// 	playback.finished = await (playback as any).next();
+				// 	console.warn('behind!');
+				// }
+
+				player.logger.profile('seek time');
+			}
+			// Don't seek if paused, but do rerender if requested.
+			else if (state.paused) {
+				if (state.render || (state.paused && previousState !== PlaybackState.Paused)) {
+					await (player as any).render.dispatch();
+				}
+				(player as any).request();
+				return;
+			}
+			// If playing, move forwards one frame if we aren't yet caught up.
+			else {
+				console.log('let\'s a go')
+				await player.playback.progress();
+			}
+
+			// Draw the project
+			await (player as any).render.dispatch();
+			(player as any).frame.current = player.playback.frame;
+
+			(player as any).request();
+		};
 
 		// The big boi, override the playback manager's next state to properly coordinate the scenes.
 
@@ -216,6 +313,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 		ensure(emptyTimelineScene, 'EmptyTimelineScene not found.');
 
 		(player.playback as any).next = async () => {
+			// console.trace('next');
 			// Animate the previous scene transition if it exists, and the current scene is still running.
 			if (playback.previousScene) {
 				await playback.previousScene.next();

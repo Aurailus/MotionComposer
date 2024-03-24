@@ -162,7 +162,6 @@ export default function Timeline() {
 		const maxFrame = player.status.secondsToFrames(userRange.value[1]);
 
     seeking.value = clamp(minFrame, maxFrame, frame);
-		console.log(frame, playheadPos());
     if (playheadPos() !== frame) player.requestSeek(frame);
 
     // const isInUserRange = player.isInUserRange(frame);
