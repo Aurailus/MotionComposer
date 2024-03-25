@@ -201,29 +201,32 @@ export default function StateManager({ children }: { children: ComponentChildren
 			return this.currentScene.isFinished();
 		}).bind(player.playback);
 
-		/** Override PlaybackManager.seek() method to swap to the right clip and shift its start frame. */
+		/** Helper method used by overridden PlaybackManager.seek() and PlaybackManager.next() to advance scene frames. */
 
-		async function advanceSceneWithoutSeek(scene: Scene, count: number) {
-			for (let i = 0; i < count; i++) {
+		async function advanceSceneWithoutSeek(scene: Scene, frames: number) {
+			for (let i = 0; i < frames / player.status.speed; i++) {
 				await scene.next();
 				ensure(!scene.isFinished(), 'Tried to advance past the end of a scene.');
 			}
 		}
 
+		/** Override PlaybackManager.seek() method to swap to the right clip and shift its start frame. */
+
 		(player.playback as any).seek = (async function(frame: number) {
 			// Frame is too high, we need to skip back to the start.
 			if (this.frame > frame) {
-				const cached = clipsCache().get(currentClip.current);
-				if (!cached) console.warn('Uncached clip!');
-
-				this.frame = cached?.clipRange[0] ?? 0;
-
 				// Update the current scene if we need to.
 				const scene = this.findBestScene(frame);
 				if (scene !== this.currentScene) {
 					this.previousScene = null;
 					this.currentScene = scene;
 				}
+
+				const cached = clipsCache().get(currentClip.current);
+				if (!cached) console.warn('Uncached clip!');
+
+				this.frame = cached?.clipRange[0] ?? 0;
+
 
 				// Reset the current scene.
 				await this.currentScene.reset();

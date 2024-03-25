@@ -3,11 +3,11 @@
   "timeEvents": [
     {
       "name": "start",
-      "targetTime": 0.6396327467482792
+      "targetTime": 0.44774292272379523
     },
     {
       "name": "back",
-      "targetTime": 1.6396327467482792
+      "targetTime": 1.4477429227237952
     }
   ],
   "seed": 504328287
