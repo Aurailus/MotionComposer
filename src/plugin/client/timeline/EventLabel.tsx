@@ -97,7 +97,7 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
         class={styles.label}
         data-name={event.name}
         style={{ left: `${framesToPixels(scene.playback.secondsToFrames(
-          event.initialTime + Math.max(0, eventTime)) - offset) - 6}px` }}
+          event.initialTime - startSec + Math.max(0, eventTime)) - offset) - 4}px` }}
 
         onDblClick={handleGoToSource}
         onPointerDown={handlePointerDown}
@@ -108,7 +108,7 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
       <div
         className={styles.label_backdrop}
         style={{
-          left: `${framesToPixels(scene.playback.secondsToFrames(event.initialTime - startSec) - offset) - 4}px`,
+          left: `${framesToPixels(scene.playback.secondsToFrames(event.initialTime - startSec) - offset) - 2}px`,
           width: `${Math.max(0, framesToPixels(scene.playback.secondsToFrames(eventTime)))}px`,
         }}
       />
