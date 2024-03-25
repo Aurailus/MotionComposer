@@ -7,13 +7,13 @@ import { useLayoutEffect, useState, useContext } from 'preact/hooks';
 import type { TimeEvent } from '@motion-canvas/core/lib/scenes/timeEvents';
 import { TimelineContext } from './TimelineContext';
 import { findAndOpenFirstUserFile, labelClipDraggingLeftSignal, useApplication } from '@motion-canvas/ui';
-import { SerializedClip } from '../Types';
+import { Clip } from '../Types';
 import { PluginContext } from '../Context';
 
 interface EventLabelProps {
   event: TimeEvent;
   scene: Scene;
-  clip: SerializedClip;
+  clip: Clip;
   offset?: number;
 }
 

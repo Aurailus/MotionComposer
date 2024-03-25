@@ -3,10 +3,10 @@
 import { useSignal } from '@preact/signals';
 import { PluginContext, PluginContextData } from './Context';
 import { PlaybackState, PlaybackStatus, ProjectMetadata, Scene, Vector2, endPlayback, endScene, startPlayback, startScene } from '@motion-canvas/core';
-import { useApplication, useCurrentScene, useScenes, useStorage } from '@motion-canvas/ui';
+import { useApplication, useCurrentScene, useScenes, useStorage, useDuration } from '@motion-canvas/ui';
 import { ComponentChildren } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { CachedClipInfo, SerializedClip } from './Types';
+import { ClipInfo, Clip } from './Types';
 import PluginSettings from './Settings';
 import { useSignalish } from './Signalish';
 import { ensure, useStore } from './Util';
@@ -29,12 +29,12 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const { project, player } = useApplication();
 	const settings = metaPluginSettings(project.meta);
 
-	const clipsStore = useStore<SerializedClip[][]>([]);
-	const clipsCache = useStore<Map<SerializedClip, CachedClipInfo>>(new Map());
+	const clipsStore = useStore<Clip[][]>([]);
+	const clipsCache = useStore<Map<Clip, ClipInfo>>(new Map());
 	const sceneSubscriptions = useRef<Map<Scene, (() => void)>>(new Map());
 
-	const range = useSignal<[ number, number ]>([ 0, 0 ]);
-	const userRange = useSignal<[ number, number ]>([ 0, 0 ]);
+	const clip = useSignal<Clip | null>(null);
+	const clipInfo = useSignal<ClipInfo | null>(null);
 
 	/**
 	 * Refresh cached clip data, including frame ranges and scene subscriptions.
@@ -47,11 +47,11 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 		const hangingScenes = new Set<Scene>([ ...sceneSubscriptions.current.keys() ]);
 
-		const newCache = new Map<SerializedClip, CachedClipInfo>(clips().flatMap((arr) => {
+		const newCache = new Map<Clip, ClipInfo>(clips().flatMap((arr) => {
 
 			let lastEndFrames = -1;
 
-			return arr.map((clip): [ SerializedClip, CachedClipInfo ] => {
+			return arr.map((clip): [ Clip, ClipInfo ] => {
 				let scene = clip.type === 'scene' && scenes.find(s => s.name === clip.path) || undefined;
 				ensure(scene, 'Scene is missing, or tried to cache a non-scene clip.');
 
@@ -71,7 +71,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 				ensure(clipRange[0] >= 0 && clipRange[1] > clipRange[0],
 					'Clip must not end before it begins.');
 
-				const cached: CachedClipInfo = {
+				const cached: ClipInfo = {
 					clipRange,
 					lengthFrames,
 					startFrames,
@@ -81,12 +81,9 @@ export default function StateManager({ children }: { children: ComponentChildren
 				if (hangingScenes.has(scene)) hangingScenes.delete(scene);
 
 				if (!sceneSubscriptions.current.has(scene)) {
-					/** `onCacheChanged` triggers immediately when subscribed, so discard the first call. */
-					let firstTrigger = true;
 					sceneSubscriptions.current.set(scene, scene.onCacheChanged.subscribe(() => {
-						if (firstTrigger) firstTrigger = false;
-						else refreshClipsCache();
-					}));
+						refreshClipsCache();
+					}, false));
 				}
 
 				hangingScenes.forEach(scene => {
@@ -104,15 +101,10 @@ export default function StateManager({ children }: { children: ComponentChildren
 		let endTime = 0;
 		clips().forEach(ch => ch.forEach(c => endTime = Math.max(endTime, c.offset + c.length)));
 
-		const userRangeAtEnd = userRange.value[1] === range.value[1];
-		range.value = [ 0, endTime ];
-		if (userRangeAtEnd) userRange.value = [ 0, endTime ];
-		else userRange.value = [ userRange.value[0], Math.min(userRange.value[1], range.value[1]) ];
-
 		clipsCache(newCache);
 	}, []);
 
-	const clips = useSignalish(() => clipsStore(), useCallback((clips: SerializedClip[][]) => {
+	const clips = useSignalish(() => clipsStore(), useCallback((clips: Clip[][]) => {
 		console.warn('SETTING CLIPS');
 		clipsStore(clips);
 		refreshClipsCache();
@@ -120,86 +112,57 @@ export default function StateManager({ children }: { children: ComponentChildren
 		return clips;
 	}, []));
 
-	const currentClip = useRef<SerializedClip>(null);
-
 	useLayoutEffect(() => {
-		currentClip.current = clipsStore()?.[0]?.[0] ?? null;
+		const EMPTY_TIMELINE_SCENE = scenes.find(s => s.name === 'EmptyTimelineScene') ?? null;
+		const EMPTY_TIMELINE_CLIP: Clip = {
+			type: 'scene',
+			path: 'EmptyTimelineScene',
+			length: 1,
+			offset: 0,
+			start: 0,
+			volume: 0
+		};
 
-		/** Override PlaybackManager.getNextScene() method to find the clip's next scene. */
+		clip.value = clipsStore()?.[0]?.[0] ?? null;
+		clipInfo.value = clipsCache().get(clip.value) ?? null;
 
-		(player.playback as any).getNextScene = (function() {
+
+		/** Helper function to get the best clip for a current frame, and update the current clip & cached clip data. */
+
+		function getBestClip(frame: number): Clip {
 			const clips = clipsStore()?.[0] ?? [];
 			const cache = clipsCache();
 
-			const ind = clips.indexOf(currentClip.current) + 1;
-			const nextClip = clips[ind];
+			let prev: Clip | null = null;
+			let next: Clip | null = null;
 
-			if (!nextClip) return null;
-			currentClip.current = nextClip;
-			return cache.get(nextClip).scene;
-		}).bind(player.playback);
-
-
-		/** Override PlaybackManager.findBestScene() method to find the best scene from the clips array.  */
-
-		const empty = scenes.find(s => s.name === 'EmptyTimelineScene');
-
-		(player.playback as any).findBestScene = (function(frame: number) {
-			const clips = clipsStore()?.[0] ?? [];
-			const cache = clipsCache();
-
-			for (let clip of clips) {
-				let cached = cache.get(clip);
+			for (let candidate of clips) {
+				let cached = cache.get(candidate);
+				ensure(cached, 'Uncached clip found!');
+				if (cached.clipRange[1] < frame) prev = candidate;
 				if (frame >= cached.clipRange[0] && frame < cached.clipRange[1] + 1) {
-					currentClip.current = clip;
-					return cached.scene;
+					clip.value = candidate;
+					clipInfo.value = cached;
+					return clip.value;
+				}
+				else if (frame < cached.clipRange[0]) {
+					next = candidate;
+					break;
 				}
 			}
 
-			currentClip.current = null;
-			return empty;
-		}).bind(player.playback);
-
-		/** Override PlaybackManager.next() to detect clip endings and request the next scene properly. */
-
-		(player.playback as any).next = (async function() {
-			// Animate the previosu scene if it still exists, until the current scene stops.
-			if (this.previousScene) {
-				await this.previousScene.next();
-				if (this.currentScene.isFinished()) this.previousScene = null;
+			clip.value = EMPTY_TIMELINE_CLIP;
+			const clipRange: [ number, number ] = [
+				prev ? cache.get(prev).clipRange[1] + 1 : 0,
+				next ? cache.get(next).clipRange[0] - 1 : (player as any).endFrame ];
+			clipInfo.value = {
+				clipRange,
+				lengthFrames: clipRange[1] - clipRange[0],
+				startFrames: 0,
+				scene: EMPTY_TIMELINE_SCENE
 			}
-
-			// Move the frame counter.
-			this.frame += this.speed;
-
-			const cached = clipsCache().get(currentClip.current);
-
-			// What is this for??
-			if (this.currentScene.isFinished()) {
-				return true;
-			}
-
-			// Compute the next frame in the scene.
-			await this.currentScene.next();
-
-			// If the current scene is done transitioning, clear the previous scene.
-			if (this.previousScene && this.currentScene.isAfterTransitionIn()) this.previousScene = null;
-
-			// If the current scene is over, or the current clip is over, locate the next scene and move to it.
-			if (this.currentScene.canTransitionOut() || this.frame >= (cached?.clipRange[1] ?? 0)) {
-				this.previousScene = this.currentScene;
-				const nextScene = this.getNextScene(this.previousScene);
-				if (nextScene) {
-					this.currentScene = nextScene;
-					await this.currentScene.reset(this.previousScene);
-					const cached = clipsCache().get(currentClip.current);
-					await advanceSceneWithoutSeek(this.currentScene, cached?.startFrames ?? 0);
-				}
-				if (!nextScene || this.currentScene.isAfterTransitionIn()) this.previousScene = null;
-			}
-
-			return this.currentScene.isFinished();
-		}).bind(player.playback);
+			return clip.value
+		}
 
 		/** Helper method used by overridden PlaybackManager.seek() and PlaybackManager.next() to advance scene frames. */
 
@@ -210,9 +173,63 @@ export default function StateManager({ children }: { children: ComponentChildren
 			}
 		}
 
+		/** Override PlaybackManager.getNextScene() method to find the clip's next scene. */
+
+		(player.playback as any).getNextScene = (function() {
+			getBestClip(clipInfo.value?.clipRange[1] + 1 ?? 0);
+			if (!clip.value) return null;
+			return clipInfo.value.scene;
+		}).bind(player.playback);
+
+
+		/** Override PlaybackManager.findBestScene() method to find the best scene from the clips array.  */
+
+		(player.playback as any).findBestScene = (function(frame: number) {
+			getBestClip(frame);
+			return clipInfo.value.scene;
+		}).bind(player.playback);
+
+		/** Override PlaybackManager.next() to detect clip endings and request the next scene properly. */
+
+		(player.playback as any).next = (async function() {
+			// Animate the previous scene if it still exists, until the current scene stops.
+			if (this.previousScene) {
+				await this.previousScene.next();
+				if (this.currentScene.isFinished()) this.previousScene = null;
+			}
+
+			// Move the frame counter.
+			this.frame += this.speed;
+
+			// What is this for??
+			if (this.currentScene.isFinished()) {
+				return true;
+			}
+
+			// Compute the next frame in the scene.
+			if (this.currentScene !== EMPTY_TIMELINE_SCENE) await this.currentScene.next();
+
+			// If the current scene is done transitioning, clear the previous scene.
+			if (this.previousScene && this.currentScene.isAfterTransitionIn()) this.previousScene = null;
+
+			// If the current scene is over, or the current clip is over, locate the next scene and move to it.
+			if (this.currentScene.canTransitionOut() || this.frame > clipInfo.value.clipRange[1]) {
+				this.previousScene = this.currentScene;
+				const nextScene = this.getNextScene(this.previousScene);
+				if (nextScene) {
+					this.currentScene = nextScene;
+					await this.currentScene.reset(this.previousScene);
+					await advanceSceneWithoutSeek(this.currentScene, clipInfo.value.startFrames);
+				}
+				if (!nextScene || this.currentScene.isAfterTransitionIn()) this.previousScene = null;
+			}
+
+			return this.currentScene.isFinished();
+		}).bind(player.playback);
+
 		/** Override PlaybackManager.seek() method to swap to the right clip and shift its start frame. */
 
-		(player.playback as any).seek = (async function(frame: number) {
+		(player.playback as any).seek = (async function (frame: number) {
 			// Frame is too high, we need to skip back to the start.
 			if (this.frame > frame) {
 				// Update the current scene if we need to.
@@ -222,15 +239,17 @@ export default function StateManager({ children }: { children: ComponentChildren
 					this.currentScene = scene;
 				}
 
-				const cached = clipsCache().get(currentClip.current);
-				if (!cached) console.warn('Uncached clip!');
+				if (scene !== EMPTY_TIMELINE_SCENE) {
+					this.frame = clipInfo.value.clipRange[0] ?? 0;
 
-				this.frame = cached?.clipRange[0] ?? 0;
-
-
-				// Reset the current scene.
-				await this.currentScene.reset();
-				await advanceSceneWithoutSeek(this.currentScene, cached?.startFrames ?? 0);
+					// Reset the current scene.
+					await this.currentScene.reset();
+					await advanceSceneWithoutSeek(this.currentScene, clipInfo.value.startFrames);
+				}
+				else {
+					await this.currentScene.reset();
+					this.frame = frame;
+				}
 			}
 
 			// Frame is too low, we need to skip forward to the right frame.
@@ -243,6 +262,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 
 		/* Augment Player.prepare() to set the right final duration. */
+		// hypothetically, it would be better to override PlaybackManager.recalculate() instead of Player.prepare(),
+		// but when I tried to do that I got funky results.
 
 		const oldPlayerPrepare = (player as any).prepare.bind(player);
 
@@ -252,9 +273,25 @@ export default function StateManager({ children }: { children: ComponentChildren
 			const duration = clipsStore()?.[0]?.reduce((lastMax, clip) =>
 				Math.max(lastMax, cache.get(clip).clipRange[1]), 0) ?? 0;
 			this.duration.current = duration;
+			this.playback.duration = duration;
 			return playerState;
 		}).bind(player);
+
+		// const oldPlaybackRecalculate = player.playback.recalculate.bind(player.playback);
+		// (player.playback as any).recalculate = (async function() {
+		// 	await oldPlaybackRecalculate();
+		// 	const cache = clipsCache();
+		// 	const duration = clipsStore()?.[0]?.reduce((lastMax, clip) =>
+		// 		Math.max(lastMax, cache.get(clip).clipRange[1]), 0) ?? 0;
+		// 	this.duration = duration;
+		// 	console.log(this.duration);
+		// }).bind(player.playback);
 	}, []);
+
+	useEffect(() => {
+		player.playback.recalculate();
+	}, [ clipsStore() ]);
+
 
 	useEffect(() => {
 		let cancel: () => void;
@@ -266,11 +303,11 @@ export default function StateManager({ children }: { children: ComponentChildren
 		return cancel;
 	}, []);
 
-	const getClipFrameRange = useCallback((clip: SerializedClip) => {
+	const getClipFrameRange = useCallback((clip: Clip) => {
 		return clipsCache().get(clip).clipRange;
 	}, []);
 
-	const getClipScene = useCallback((clip: SerializedClip) => {
+	const getClipScene = useCallback((clip: Clip) => {
 		return clipsCache().get(clip).scene;
 	}, []);
 
@@ -282,6 +319,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const ctx: PluginContextData = {
 		handleMediaTabVisibilityChange: setMediaTabVisible,
 		clips,
+		clip,
+		clipInfo,
 		getClipFrameRange,
 		getClipScene,
 		getSceneFrameLength,

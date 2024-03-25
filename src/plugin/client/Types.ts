@@ -2,7 +2,7 @@ import { Scene } from "@motion-canvas/core";
 
 export type ClipType = 'scene' | 'video' | 'image' | 'audio';
 
-export interface SerializedClip {
+export interface Clip {
 
 	/** The type of this clip. */
 	type: ClipType;
@@ -23,7 +23,7 @@ export interface SerializedClip {
 	volume: number;
 }
 
-export interface CachedClipInfo {
+export interface ClipInfo {
 	/** The number of frames into the scene that this clip should start at. */
 	startFrames: number;
 

@@ -6,14 +6,14 @@ import { findAndOpenFirstUserFile, useApplication, usePreviewSettings, useSubscr
 
 import styles from './Timeline.module.scss';
 
-import { SerializedClip } from '../Types';
+import { Clip } from '../Types';
 import { TimelineContext } from './TimelineContext';
 import EventLabel from './EventLabel';
 import { ComponentChildren, VNode } from 'preact';
 import clsx from 'clsx';
 
 interface ClipProps {
-	clip: SerializedClip;
+	clip: Clip;
 	range: [ number, number ];
 	cropped: [ boolean, boolean ];
 	class?: string;
@@ -122,7 +122,7 @@ function Clip(props: ClipProps) {
 
 interface SceneClipProps {
 	scene: Scene;
-	clip: SerializedClip;
+	clip: Clip;
 	range: [ number, number ];
 }
 
@@ -159,7 +159,7 @@ export function SceneClip({ scene, clip, range }: SceneClipProps) {
 }
 
 interface MissingClipProps {
-	clip: SerializedClip;
+	clip: Clip;
 	range: [ number, number ];
 }
 
@@ -189,7 +189,7 @@ const CHONKYNESS = 3;
 const LAYERS = 4;
 
 interface AudioClipProps {
-	clip: SerializedClip;
+	clip: Clip;
 	range: [ number, number ];
 }
 

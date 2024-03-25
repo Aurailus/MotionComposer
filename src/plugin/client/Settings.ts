@@ -1,5 +1,5 @@
-import { SerializedClip } from './Types';
+import { Clip } from './Types';
 
 export default interface PluginSettings {
-	clips: SerializedClip[][];
+	clips: Clip[][];
 }
