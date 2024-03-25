@@ -18,9 +18,9 @@ A (heavily WIP) plugin to add more video editing features to [Motion Canvas](htt
 - [ ] Allow modifying audio clip volume.
 - [x] Override playback to play in order.
   - [x] Fix scene end detection.
-  - [ ] Fix playback range behaviour.
-  - [ ] Fix play bar position and frame counts.
-  - [ ] Check if modifying a scene fucks things up.
+  - [x] Fix playback range behaviour.
+  - [x] Fix play bar position and frame counts.
+  - [x] Check if modifying a scene fucks things up.
   - [x] Make sure having no scene works.
 - [ ] Dummy scenes to display video and images.
 - [ ] FFMPEG exporter.
