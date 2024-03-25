@@ -6,7 +6,7 @@ import { useState, useLayoutEffect } from 'preact/hooks';
 import { NumberInputSelectProps, OverlayWrapper, PluginOverlayConfig } from '@motion-canvas/ui';
 
 import Timeline from './timeline/Timeline';
-import Playback from './playback/Playback';
+// import Playback from './playback/Playback';
 
 /**
  * Identifies the existing timeline in the DOM, and renders our new timeline overtop of it.
@@ -51,9 +51,9 @@ function Overlay() {
 				height: `${timelineHeight}px` }}>
 				<Timeline/>
 			</div>}
-			<div class={styles.playback_overlay} style={{ width: `${playbackWidth}px`, bottom: `${timelineHeight + 30}px` }}>
+			{/* <div class={styles.playback_overlay} style={{ width: `${playbackWidth}px`, bottom: `${timelineHeight + 30}px` }}>
 				<Playback/>
-			</div>
+			</div> */}
     </OverlayWrapper>
   );
 }

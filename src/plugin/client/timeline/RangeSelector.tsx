@@ -5,7 +5,7 @@ import { RefObject} from 'preact';
 import { useContext, useRef } from 'preact/hooks';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { useApplication, useDuration, useKeyHold,
-	labelClipDraggingLeftSignal, MouseButton, DragIndicator, usePreviewSettings, useCurrentFrame } from '@motion-canvas/ui';
+	labelClipDraggingLeftSignal, MouseButton, DragIndicator, usePreviewSettings, useCurrentFrame, useSharedSettings, clamp, usePlayerTime } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 
@@ -19,13 +19,17 @@ export interface RangeSelectorProps {
 export function RangeSelector({rangeRef}: RangeSelectorProps) {
   const { pixelsToFrames, framesToPixels, pointerToFrames } = useContext(TimelineContext);
   const { player, meta } = useApplication();
-  const { range, userRange } = useContext(PluginContext);
+  const { range } = useSharedSettings();
+  const duration = useDuration();
+  const { fps } = usePreviewSettings();
+  const { clips, getClipFrameRange } = useContext(PluginContext);
 
-  const startFrame = player.status.secondsToFrames(userRange.value[0]);
-  const endFrame = player.status.secondsToFrames(userRange.value[1]);
+  const startFrame = player.status.secondsToFrames(range[0]);
+  const endFrame = Math.min(player.status.secondsToFrames(range[1]), duration);
 
 	const [ start, setStart ] = useState(startFrame);
   const [ end, setEnd ] = useState(endFrame);
+
 
   useEffect(() => {
     setStart(startFrame);
@@ -34,13 +38,27 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
 
 	const definingRangeState = useRef<false | 'on_move' | true>(null);
 
-	function handleResetRange() {
+	function handleResetOrClampRange(evt: MouseEvent) {
 		definingRangeState.current = false;
-		userRange.value = [ 0, range.value[1] ];
+    evt.preventDefault();
+    evt.stopPropagation();
+
+    if (startFrame !== 0 || endFrame !== duration) {
+      meta.shared.range.update(0, duration, duration, fps);
+    }
+    else {
+      const playheadSeconds = player.status.framesToSeconds(pointerToFrames(evt.clientX));
+      const clip = (clips()[0] ?? []).find(c => c.offset <= playheadSeconds && c.offset + c.length >= playheadSeconds);
+      if (!clip) return;
+      const frameRange = getClipFrameRange(clip);
+      meta.shared.range.update(frameRange[0], frameRange[1], duration, fps);
+    }
 	}
 
 	function handleStartDefineRange(evt: PointerEvent) {
 		definingRangeState.current = 'on_move';
+    evt.preventDefault();
+    evt.stopPropagation();
 	}
 
 	function handleMoveDefineRange(evt: PointerEvent) {
@@ -83,16 +101,19 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
 
   const handleCommitRange = useCallback(() => {
     labelClipDraggingLeftSignal.value = null;
-		const normalizedStart =
-			Math.max(player.status.framesToSeconds(Math.ceil(Math.max(Math.min(start, end), 0))), range.value[0]);
-		const normalizedEnd =
-			Math.min(player.status.framesToSeconds(Math.ceil(Math.min(Math.max(start, end))) + (end < start ? 1 : 0)), range.value[1]);
-		userRange.value = [ normalizedStart, normalizedEnd ];
-  }, [ start, end, userRange ]);
+
+		const normalizedStart = clamp(
+      0, duration, Math.ceil(Math.min(start, end)));
+    const normalizedEnd = clamp(
+      0, duration, Math.ceil(Math.max(start, end)) + (end < start ? 1 : 0));
+
+    meta.shared.range.update(normalizedStart, normalizedEnd, duration, fps);
+  }, [ start, end, duration, fps ]);
 
 
-  let normalizedStart = Math.ceil(Math.max(Math.min(start, end), player.status.secondsToFrames(range.value[0])));
-  let normalizedEnd = Math.ceil(Math.min(Math.max(start, end), player.status.secondsToFrames(range.value[1]))) + (end < start ? 1 : 0);
+
+  let normalizedStart = Math.ceil(Math.max(Math.min(start, end), 0));
+  let normalizedEnd = Math.ceil(Math.min(Math.max(start, end), duration)) + (end < start ? 1 : 0);
 
   return (
     <div
@@ -100,7 +121,7 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
       onPointerDown={handleStartDefineRange}
       onPointerMove={handleMoveDefineRange}
       onPointerUp={handleStopDefineRange}
-			onDblClick={handleResetRange}
+			onDblClick={handleResetOrClampRange}
     >
       <div
         ref={rangeRef}
@@ -113,7 +134,7 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
         onPointerDown={handleStartShiftRange}
         onPointerMove={handleMoveShiftRange}
         onPointerUp={handleEndShiftRange}
-        onDblClick={handleResetRange}
+        onDblClick={handleResetOrClampRange}
       >
         <RangeHandle value={start} setValue={setStart} onDrop={handleCommitRange} />
         <div class={styles.handleSpacer} />

@@ -1,6 +1,6 @@
 /* @jsxImportSource preact */
 
-import { MouseButton, MouseMask, clamp, labelClipDraggingLeftSignal, useApplication, useDuration, usePreviewSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
+import { MouseButton, MouseMask, borderHighlight, clamp, labelClipDraggingLeftSignal, useApplication, useDuration, usePlayerTime, usePreviewSettings, useSharedSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
 import styles from './Timeline.module.scss';
 
 import ClipsTrack from './ClipsTrack';
@@ -14,6 +14,7 @@ import { useSignalish } from '../Signalish';
 import { RangeSelector } from './RangeSelector';
 import { wrapper } from '@motion-canvas/2d';
 import { PluginContext } from '../Context';
+import { usePlayback } from '@motion-canvas/core';
 
 const ZOOM_SPEED = 0.1;
 
@@ -30,7 +31,8 @@ const ZOOM_START_THRESHOLD = 48;
 export default function Timeline() {
 	const [ scale, setScale ] = useStorage('timeline-scale', 1);
 	const [ offset, setOffset ] = useStorage('timeline-offset', 0);
-	const { userRange, playheadPos } = useContext(PluginContext);
+	const time = usePlayerTime();
+	const { range } = useSharedSettings();
 	const { player } = useApplication();
 	const { fps } = usePreviewSettings();
 
@@ -41,13 +43,14 @@ export default function Timeline() {
 	const rect = useSize(wrapperRef);
 	const rangeRef = useRef<HTMLDivElement>();
 
+	const warnedAboutRange = useRef(false);
 	const seeking = useSignal<number | null>(null);
 
 	/** Loaded the scene information. */
 	const isReady = duration > 0;
 
 	/** Set the initial scroll position once everything loads. */
-  useLayoutEffect(() => void(wrapperRef.current.scrollLeft = offset), [rect.width > 0 && isReady ]);
+  useLayoutEffect(() => void(wrapperRef.current.scrollLeft = offset), [ rect.width > 0 && isReady ]);
 
 	const sizes = useMemo(() => ({
       viewLength: rect.width,
@@ -158,24 +161,19 @@ export default function Timeline() {
 
 	function scrub(pos: number) {
     const frame = Math.floor(state.pointerToFrames(pos));
-		const minFrame = player.status.secondsToFrames(userRange.value[0]);
-		const maxFrame = player.status.secondsToFrames(userRange.value[1]);
+		const minFrame = player.status.secondsToFrames(range[0]);
+		const maxFrame = Math.min(player.status.secondsToFrames(range[1]), duration);
 
     seeking.value = clamp(minFrame, maxFrame, frame);
-    if (playheadPos() !== frame) player.requestSeek(frame);
+    if (time.frame !== seeking.value) player.requestSeek(seeking.value);
 
-    // const isInUserRange = player.isInUserRange(frame);
-    // const isOutOfRange = player.isInRange(frame) && !isInUserRange;
-    // if (!warnedAboutRange.current && !reduceMotion && isOutOfRange) {
-    //   warnedAboutRange.current = true;
-    //   rangeRef.current?.animate(borderHighlight(), {
-    //     duration: 200,
-    //   });
-    // }
-
-    // if (isInUserRange) {
-    //   warnedAboutRange.current = false;
-    // }
+    const isInUserRange = player.isInUserRange(frame);
+    const isOutOfRange = player.isInRange(frame) && !isInUserRange;
+    if (!warnedAboutRange.current && isOutOfRange) {
+      warnedAboutRange.current = true;
+      rangeRef.current?.animate(borderHighlight(), { duration: 200 });
+    }
+    if (isInUserRange) warnedAboutRange.current = false;
 	}
 
 	function handleScrubStart(evt: PointerEvent) {
@@ -254,7 +252,7 @@ export default function Timeline() {
 						<div
 							class={styles.timeline_content}
 							style={{
-								// width: `${sizes.playableLength}px`,
+								width: `${conversion.framesToPixels(duration)}px`,
 								left: `${sizes.paddingLeft}px` }}
 						>
 							<RangeSelector rangeRef={rangeRef}/>

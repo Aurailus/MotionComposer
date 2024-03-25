@@ -19,7 +19,7 @@ interface EventLabelProps {
 
 export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabelProps) {
   const { player } = useApplication();
-  const { playheadPos, getClipFrameRange } = useContext(PluginContext);
+  const { getClipFrameRange } = useContext(PluginContext);
   const { framesToPixels, pixelsToFrames } = useContext(TimelineContext);
 
   const startSec = clip.start;
@@ -37,7 +37,7 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
   }
 
   function handleSeek() {
-    playheadPos(getClipFrameRange(clip)[0] + player.status.secondsToFrames(event.initialTime + event.offset));
+    player.requestSeek(getClipFrameRange(clip)[0] + player.status.secondsToFrames(event.initialTime + event.offset));
   }
 
   async function handlePointerDown(e: PointerEvent) {

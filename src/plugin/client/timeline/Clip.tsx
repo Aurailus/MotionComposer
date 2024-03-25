@@ -215,9 +215,6 @@ export function AudioClip({ clip, range }: AudioClipProps) {
 
 		context.fillStyle = getComputedStyle(context.canvas).getPropertyValue('fill');
 
-    // context.beginPath();
-    // context.moveTo(0, 20);
-
     const start =
       (player.status.framesToSeconds(firstVisibleFrame) - 0) *
       audioData.sampleRate;
