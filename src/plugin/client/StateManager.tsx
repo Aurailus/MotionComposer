@@ -2,7 +2,7 @@
 
 import { useSignal } from '@preact/signals';
 import { PluginContext, PluginContextData } from './Context';
-import { PlaybackState, ProjectMetadata, Scene, Vector2 } from '@motion-canvas/core';
+import { PlaybackState, PlaybackStatus, ProjectMetadata, Scene, Vector2, endPlayback, endScene, startPlayback, startScene } from '@motion-canvas/core';
 import { useApplication, useCurrentScene, useScenes, useStorage } from '@motion-canvas/ui';
 import { ComponentChildren } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
@@ -166,6 +166,35 @@ export default function StateManager({ children }: { children: ComponentChildren
 	}, []));
 
 	useLayoutEffect(() => {
+		scenes.map(s => {
+			(s as any).execute = (function(callback: any): any {
+				let result: any;
+
+				startScene(this);
+
+				const playback = new Proxy(this.playback,{
+					get(elem, prop, recv) {
+						if (prop === "deltaTime") {
+							return Reflect.get(elem, prop, recv) * 0.3;
+						}
+						else {
+							return Reflect.get(elem, prop, recv);
+						}
+					}
+				}) as PlaybackStatus;
+
+				startPlayback(playback);
+				try {
+					result = callback();
+				} finally {
+					endPlayback(playback);
+					endScene(this);
+				}
+
+				return result;
+			}).bind(s);
+		})
+
 		// Hijack the player's frame changing behaviour.
 
 		/** Override seeking methods to work properly with the virtual playback position. */
@@ -385,6 +414,40 @@ export default function StateManager({ children }: { children: ComponentChildren
 				return playback.currentScene.isFinished();
 			}
 		}
+
+	// 	(player.playback as any).next = (async function() {
+	// 		if (this.previousScene) {
+	// 			await this.previousScene.next();
+	// 			if (this.currentScene.isFinished()) {
+	// 				this.previousScene = null;
+	// 			}
+	// 		}
+
+	// 		this.frame += this.speed * 0.1;
+
+	// 		if (this.currentScene.isFinished()) {
+	// 			return true;
+	// 		}
+
+	// 		await this.currentScene.next();
+	// 		if (this.previousScene && this.currentScene.isAfterTransitionIn()) {
+	// 			this.previousScene = null;
+	// 		}
+
+	// 		if (this.currentScene.canTransitionOut()) {
+	// 			this.previousScene = this.currentScene;
+	// 			const nextScene = this.getNextScene(this.previousScene);
+	// 			if (nextScene) {
+	// 				this.currentScene = nextScene;
+	// 				await this.currentScene.reset(this.previousScene);
+	// 			}
+	// 			if (!nextScene || this.currentScene.isAfterTransitionIn()) {
+	// 				this.previousScene = null;
+	// 			}
+	// 		}
+
+	// 		return this.currentScene.isFinished();
+	// 	}).bind(player.playback);
 	}, []);
 
 	useEffect(() => {

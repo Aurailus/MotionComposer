@@ -8,7 +8,6 @@ export default makeScene2D(function* (view) {
 
   view.add(<Circle ref={circle} size={320} fill={'lightseagreen'} />);
 
-
   yield* circle().scale(2, 1).to(1, 1);
   yield* waitUntil('almostEnd');
   yield* waitFor(0.1);

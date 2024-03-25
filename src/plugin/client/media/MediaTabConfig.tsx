@@ -3,6 +3,8 @@
 import { useContext, useEffect } from 'preact/hooks';
 import { Pane, PluginTabConfig, PluginTabProps, Tab } from '@motion-canvas/ui';
 
+import styles from './Media.module.scss';
+
 import { PluginContext } from '../Context';
 import MediaPane from './MediaPane';
 
@@ -24,8 +26,10 @@ function MediaTab() {
 
 	// Render the media tab.
 	return (
-		<Pane title='Clips & Media'>
-			<MediaPane/>
+		<Pane title='Scenes & Media'>
+			<div class={styles.media_tab}>
+				<MediaPane/>
+			</div>
 		</Pane>
 	);
 }

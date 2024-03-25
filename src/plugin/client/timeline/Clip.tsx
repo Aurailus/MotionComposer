@@ -252,37 +252,6 @@ export function AudioClip({ clip, range }: AudioClipProps) {
 				);
 			}
 		}
-
-
-
-    // for (let index = start; index < end; index += step * 128) {
-    //   const offset = index - start;
-    //   const sample = Math.round(flooredStart + offset);
-    //   if (sample >= audioData.peaks.length) break;
-
-    //   // context.lineTo(
-    //   //   ((padding + offset) / length) * CANVAS_WIDTH,
-    //   //   (audioData.peaks[sample] / audioData.absoluteMax) * 20 + 20,
-    //   // );
-    //   // context.lineTo(
-    //   //   ((padding + offset + step) / length) * CANVAS_WIDTH,
-    //   //   (audioData.peaks[sample + 1] / audioData.absoluteMax) * 20 + 20,
-    //   // );
-
-		// 	let a = (audioData.peaks[sample] / audioData.absoluteMax) * CANVAS_HEIGHT / 2;
-		// 	let b = (audioData.peaks[sample + 1] / audioData.absoluteMax) * CANVAS_HEIGHT / 2;
-		// 	let min = Math.min(a, b);
-		// 	let max = Math.max(a, b);
-
-		// 	if (index === start + step * 30) console.log(min, max);
-
-		// 	context.fillRect(
-		// 		((padding + offset) / length) * CANVAS_WIDTH,
-		// 		CANVAS_HEIGHT / 2 - max,
-		// 		CELL_WIDTH,
-		// 		-min + max
-		// 	)
-    // }
   }, [,
     context,
     audioData,
