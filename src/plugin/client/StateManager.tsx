@@ -59,31 +59,22 @@ export default function StateManager({ children }: { children: ComponentChildren
 				const startFrames = scene.playback.secondsToFrames(clip.start);
 				const lengthFrames = scene.playback.secondsToFrames(clip.length);
 
-				// console.log({ lastEndFrames, offsetFrames, startFrames, lengthFrames })
-
 				ensure(offsetFrames > lastEndFrames, 'Clips must not overlap.');
 				lastEndFrames = offsetFrames + lengthFrames - 1;
 
-				const sceneRange = [ scene.firstFrame, scene.lastFrame ] as [ number, number ];
-				const rawClipRange = [ sceneRange[0] + 1 + startFrames,
-					sceneRange[0] + 1 + startFrames + lengthFrames ] as [ number, number ];
 				const clipRange = [ offsetFrames, offsetFrames + lengthFrames - 1 ] as [ number, number ];
 
-
-				// console.log({ clip, sceneRange, rawClipRange, clipRange })
-
-				ensure(sceneRange[0] >= 0 && sceneRange[1] - sceneRange[0] > 0, 'Scenes frame range invalid.');
-				ensure(startFrames >= 0 && startFrames < sceneRange[1], 'Clip range start out of bounds.');
-				ensure(lengthFrames > 0 && startFrames + lengthFrames < sceneRange[1], 'Clips range length out of bounds.')
-				ensure(rawClipRange[0] > sceneRange[0] && rawClipRange[1] < sceneRange[1], 'Raw clip range out of bounds.');
-				ensure(clipRange[0] >= 0 && clipRange[1] > clipRange[0], 'Clip range invalid.')
-
-				// console.log(clip);
+				ensure(startFrames >= 0 && startFrames < scene.lastFrame - scene.firstFrame,
+					'Clip start out of bounds.');
+				ensure(lengthFrames > 0 && startFrames + lengthFrames < scene.lastFrame - scene.firstFrame,
+					'Clips length out of bounds.')
+				ensure(clipRange[0] >= 0 && clipRange[1] > clipRange[0],
+					'Clip must not end before it begins.');
 
 				const cached: CachedClipInfo = {
 					clipRange,
-					rawClipRange,
-					sceneRange,
+					lengthFrames,
+					startFrames,
 					scene
 				};
 
@@ -181,8 +172,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 			// Move the frame counter.
 			this.frame += this.speed;
 
-			const currentClipEndFrame = player.status.secondsToFrames(
-				currentClip.current.offset + currentClip.current.length);
+			const cached = clipsCache().get(currentClip.current);
 
 			// What is this for??
 			if (this.currentScene.isFinished()) {
@@ -196,12 +186,14 @@ export default function StateManager({ children }: { children: ComponentChildren
 			if (this.previousScene && this.currentScene.isAfterTransitionIn()) this.previousScene = null;
 
 			// If the current scene is over, or the current clip is over, locate the next scene and move to it.
-			if (this.currentScene.canTransitionOut() || this.frame >= currentClipEndFrame) {
+			if (this.currentScene.canTransitionOut() || this.frame >= (cached?.clipRange[1] ?? 0)) {
 				this.previousScene = this.currentScene;
 				const nextScene = this.getNextScene(this.previousScene);
 				if (nextScene) {
 					this.currentScene = nextScene;
 					await this.currentScene.reset(this.previousScene);
+					const cached = clipsCache().get(currentClip.current);
+					await advanceSceneWithoutSeek(this.currentScene, cached?.startFrames ?? 0);
 				}
 				if (!nextScene || this.currentScene.isAfterTransitionIn()) this.previousScene = null;
 			}
@@ -211,55 +203,39 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 		/** Override PlaybackManager.seek() method to swap to the right clip and shift its start frame. */
 
+		async function advanceSceneWithoutSeek(scene: Scene, count: number) {
+			for (let i = 0; i < count; i++) {
+				await scene.next();
+				ensure(!scene.isFinished(), 'Tried to advance past the end of a scene.');
+			}
+		}
+
 		(player.playback as any).seek = (async function(frame: number) {
-			this.frame = frame;
-			const scene = this.findBestScene(frame);
-			if (scene !== this.currentScene) {
-				this.previousScene = null;
-				this.currentScene = scene;
+			// Frame is too high, we need to skip back to the start.
+			if (this.frame > frame) {
+				const cached = clipsCache().get(currentClip.current);
+				if (!cached) console.warn('Uncached clip!');
+
+				this.frame = cached?.clipRange[0] ?? 0;
+
+				// Update the current scene if we need to.
+				const scene = this.findBestScene(frame);
+				if (scene !== this.currentScene) {
+					this.previousScene = null;
+					this.currentScene = scene;
+				}
+
+				// Reset the current scene.
 				await this.currentScene.reset();
+				await advanceSceneWithoutSeek(this.currentScene, cached?.startFrames ?? 0);
 			}
 
-			// // Find the best scene and seek to it properly.
-			// if (frame <= this.frame || (currentClip.current
-			// 	&& player.status.secondsToFrames(currentClip.current.offset + currentClip.current.length)) < frame) {
-			// 	const scene = this.findBestScene(frame);
-			// 	const clipStartFrame = player.status.secondsToFrames(currentClip.current?.start ?? 0);
-
-			// 	// If the scene is different, update the current scene, and then shift the scene in to the `start`.
-			// 	if (scene !== this.currentScene) {
-			// 		this.previousScene = null;
-			// 		this.currentScene = scene;
-			// 		this.frame = this.currentScene.firstFrame;
-			// 		await this.currentScene.reset();
-			// 	}
-
-			// 	// If the scene isn't different, but we're too far ahead, reset the scene and seek forwards.
-			// 	else if (this.frame >= frame) {
-			// 		this.previousScene = null;
-			// 		this.frame = this.currentScene.firstFrame;
-			// 		await this.currentScene.reset();
-			// 	}
-
-			// 	this.frame = frame;
-			// 	const numFramesToRender = clipStartFrame;
-			// 	for (let i = 0; i < numFramesToRender; i++) {
-			// 		this.finished = await this.next();
-			// 		if (this.finished) break;
-			// 	}
-			// }
-
-			// const cached = clipsCache().get(currentClip.current);
-			// if (!cached) {
-			// 	console.warn('uncached clip');
-			// 	this.frame = frame;
-			// 	return;
-			// }
-
-			// // Seek to the right frame in the scene.
-			// this.finished = false;
-			// while (this.frame < frame && !this.finished) this.finished = await this.next();
-
+			// Frame is too low, we need to skip forward to the right frame.
+			// next() will handle swapping the scene if necessary.
+			while (this.frame < frame && !this.finished) {
+				const finished = await this.next();
+				if (finished) break;
+			}
 		}).bind(player.playback);
 
 
@@ -290,10 +266,6 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const getClipFrameRange = useCallback((clip: SerializedClip) => {
 		return clipsCache().get(clip).clipRange;
 	}, []);
-
-	// const getClipRawFrameRange = useCallback((clip: SerializedClip) => {
-	// 	return clipsCache().get(clip).rawClipRange;
-	// }, []);
 
 	const getClipScene = useCallback((clip: SerializedClip) => {
 		return clipsCache().get(clip).scene;

@@ -24,13 +24,13 @@ export interface SerializedClip {
 }
 
 export interface CachedClipInfo {
-	/** The entire scene's frame range, including buffer frames */
-	sceneRange: [ number, number ];
+	/** The number of frames into the scene that this clip should start at. */
+	startFrames: number;
 
-	/** The frame range for the clip within the raw timeline. Directly translates to clipRange. No buffer frames. */
-	rawClipRange: [ number, number ];
+	/** The length of the clip in frames. */
+	lengthFrames: number;
 
-	/** The frame range for the clip within the motion composer timeline. No buffer frames. */
+	/** The frame range for the clip in the timeline. */
 	clipRange: [ number, number ];
 
 	/** The clip's scene, if it has one. */
