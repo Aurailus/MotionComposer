@@ -95,7 +95,12 @@
 }
 
 .clip {
+  --clip-left-url: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='6.4805' height='158.46' version='1.1' viewBox='0 0 1.7227 41.596' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m1.7227-0.26337v42.123h-1.7227l1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3182-1.2362-1.2362h-0.092935l0.046727-0.04621-0.046727-0.04673h0.092935l1.2362-1.2341-1.3177-1.3182 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3052-1.3052h-0.023883l0.011941-0.01194-0.011941-0.01194h0.023883l1.3052-1.3032-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3182 1.3177-1.3177-1.2346-1.2346h-0.094492l0.047246-0.04725-0.047246-0.04725h0.094492l1.2346-1.2325-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291z'/%3E%3C/svg%3E%0A");
+
+  --clip-right-url: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='6.4805' height='158.46' version='1.1' viewBox='0 0 1.7227 41.596' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m0-1.5925v42.123h1.7227l-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3182 1.2362-1.2362h0.092935l-0.046727-0.04621 0.046727-0.04673h-0.092935l-1.2362-1.2341 1.3177-1.3182-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3052-1.3052h0.023883l-0.011941-0.01194 0.011941-0.01194h-0.023883l-1.3052-1.3032 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3182-1.3177-1.3177 1.2346-1.2346h0.094492l-0.047246-0.04725 0.047246-0.04725h-0.094492l-1.2346-1.2325 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291z'/%3E%3C/svg%3E%0A");
+
   --clip-gap: 6px;
+
   flex-shrink: 0;
   position: absolute;
   top: 0;
@@ -105,10 +110,58 @@
 
   &:first-child { padding-left: calc(var(--clip-gap)); }
   &:last-child { padding-right: calc(var(--clip-gap)); }
-  &:has(.crop.right) { padding-right: calc(var(--clip-gap) / 2 + 3px); }
-  &:has(.crop.left) { padding-left: calc(var(--clip-gap) / 2 + 3px) };
-  &:first-child:has(.crop.left) { padding-left: calc(var(--clip-gap) + 3px) };
-  &:last-child:has(.crop.right) { padding-right: calc(var(--clip-gap) + 3px) };
+
+  &.cropped_left {
+    padding-left: 1px;
+    .container { padding-left: 4px; }
+
+    .clip_handle {
+      mask: var(--clip-left-url) top left/6.6px repeat-y,
+        linear-gradient(to right, transparent 0px, transparent 5.9px, black 6px, black 100%);
+    }
+  }
+
+  &.cropped_right {
+    padding-right: 0.5px;
+    &:has(+ .clip:not(.cropped_left)) { padding-right: 1px; }
+    .container { padding-right: 4px; }
+
+    .clip_handle {
+      mask: var(--clip-right-url) top right/6.6px repeat-y,
+        linear-gradient(to right, black 6px, black calc(100% - 6px), transparent calc(100% - 5.9px));
+    }
+  }
+
+  &.cropped_left.cropped_right {
+
+    .clip_handle {
+      mask: var(--clip-left-url) top left/6.6px repeat-y,
+        var(--clip-right-url) top right/6.6px repeat-y,
+        linear-gradient(to right, transparent, transparent 5.9px, black 6px, black calc(100% - 6px), transparent calc(100% - 5.9px));
+    }
+  }
+
+  .scene_clip_label {
+    display: flex;
+    position: relative;
+    z-index: 10;
+    gap: 6px;
+    overflow: hidden;
+    max-width: 100%;
+    mask-image: linear-gradient(to right, black 0px, black calc(100% - 32px), transparent calc(100%));
+
+    svg {
+      width: 16px;
+      color: #fff5;
+      flex-shrink: 0;
+    }
+
+    .name {
+      flex-grow: 1;
+      overflow: hidden;
+      width: 1000px;
+    }
+  }
 
   .clip_inner {
     position: relative;
@@ -147,13 +200,9 @@
       &.right { right: 0; cursor: e-resize; }
     }
 
-    .crop.right ~ .range_select.right { right: -4px; }
-    .crop.left ~ .range_select.left { left: -4px; }
-
     .clip_handle {
       overflow: hidden;
       height: 100%;
-      color: var(--surface-color-hover);
 
       &::before {
         position: absolute;
@@ -163,46 +212,14 @@
         bottom: 0;
         display: block;
         content: '';
+        background-color: var(--surface-color-hover);
         border-radius: var(--radius);
-        background-color: currentColor;
         transition: background-color 0.15s;
-      }
-
-      .crop {
-        width: 5px;
-        height: 100%;
-        position: absolute;
-        top: 0;
-        color: currentColor;
-
-        &.right { right: -5px; }
-        &.left { left: -5px; transform: scaleX(-1); }
-      }
-
-      &:has(.crop.right)::before {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-
-      &:has(.crop.left)::before {
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-      }
-
-      &.continuation::before {
-        background: repeating-linear-gradient(
-          45deg,
-          transparent,
-          transparent 8px,
-          var(--surface-color-hover) 8px,
-          var(--surface-color-hover) 16px
-        );
       }
 
       .container {
         width: calc(100% - 16px);
         height: 100%;
-        padding: 0px;
         margin-left: 8px;
         overflow: hidden;
         display: flex;
@@ -217,11 +234,6 @@
         color: #ffffff99;
         cursor: pointer;
         position: relative;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: min-content;
-        padding: 0px 0px;
         height: 100%;
 
         &:hover {
@@ -333,7 +345,7 @@
 .playhead {
   position: absolute;
   width: 2px;
-  top: 2px;
+  top: 4px;
   bottom: 0;
   z-index: 200;
   background-color: var(--theme);
@@ -344,12 +356,12 @@
 
   &::before {
     display: block;
-    padding: 0 6px;
-    border-radius: 100px;
+    padding: 0 3px;
+    border-radius: 3px;
     background-color: var(--theme);
     font-family: var(--font-family-mono);
     font-size: var(--font-size-small);
-    line-height: 20px;
+    line-height: 16px;
     font-weight: bold;
     color: #000000;
     content: attr(data-frame);

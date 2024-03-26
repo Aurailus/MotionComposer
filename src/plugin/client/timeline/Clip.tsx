@@ -7,6 +7,7 @@ import { findAndOpenFirstUserFile, useApplication, usePreviewSettings, useSubscr
 import styles from './Timeline.module.scss';
 
 import { Clip } from '../Types';
+import * as Icon from '../icon';
 import { TimelineContext } from './TimelineContext';
 import EventLabel from './EventLabel';
 import { ComponentChildren, VNode } from 'preact';
@@ -76,7 +77,9 @@ function Clip(props: ClipProps) {
 
   return (
     <div
-      class={[ styles.clip, (props.class ?? '').split(' ') ].join(' ')}
+      class={clsx(styles.clip, props.class, props.cropped[0] && styles.cropped_left,
+				props.cropped[1] && styles.cropped_right)}
+
       style={{ width: `${width}px`, left: `${framesToPixels(range[0])}px` }}
     >
 			<div class={styles.clip_inner}>
@@ -93,16 +96,6 @@ function Clip(props: ClipProps) {
 					</div>
 
 					{typeof props.children === 'function' ? props.children(range) : props.children}
-
-					{props.cropped[0] && <svg class={clsx(styles.crop, styles.left)}
-						width={5} height={40} viewBox='0 0 1.3291207 10.5'>
-						<path fill='currentColor' d='M 1.3291178,10.583333 2.8541667e-8,9.2562824 1.317749,7.9385334 2.8541667e-8,6.6207843 1.3291178,5.2916666 2.8541667e-8,3.9646158 1.317749,2.6468668 2.8541667e-8,1.3291178 1.3291178,0 h -2.3874511 v 10.583333 z'/>
-					</svg>}
-
-					{props.cropped[1] && <svg class={clsx(styles.crop, styles.right)}
-						width={5} height={40} viewBox='0 0 1.3291207 10.5'>
-						<path fill='currentColor' d='M 1.3291178,10.583333 2.8541667e-8,9.2562824 1.317749,7.9385334 2.8541667e-8,6.6207843 1.3291178,5.2916666 2.8541667e-8,3.9646158 1.317749,2.6468668 2.8541667e-8,1.3291178 1.3291178,0 h -2.3874511 v 10.583333 z'/>
-					</svg>}
 
 					<div class={clsx(styles.range_select, styles.left)}
 						onPointerDown={(e) => handlePointerDown(e, 'left')}
@@ -143,10 +136,13 @@ export function SceneClip({ scene, clip, range }: SceneClipProps) {
 			cropped={[ clip.start !== 0,
 				clip.start + clip.length < player.status.framesToSeconds(scene.lastFrame - scene.firstFrame) ]}
 			labelChildren={
-				<div className={styles.name} title='Go to source'
-					onPointerDown={e => e.stopPropagation()}
-					onPointerUp={handleGoToSource}>
-					{scene.name}
+				<div class={styles.scene_clip_label}>
+					<Icon.Scene/>
+					<div className={styles.name} title='Go to source'
+						onPointerDown={e => e.stopPropagation()}
+						onPointerUp={handleGoToSource}>
+						{scene.name}
+					</div>
 				</div>
 			}>
 				{(xRange) => {

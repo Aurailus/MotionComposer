@@ -8,9 +8,8 @@ export interface PluginContextData {
 	/** All of the clips in the scene. Index 0 is video, everything else is audio. */
 	clips: Signalish<readonly Clip[][]>;
 
+	/** The currently active clip. */
 	clip?: Signal<Clip>;
-
-	clipInfo: Signal<ClipInfo>
 
 	/** Called by the media tab -- hides the timeline media pane if the media tab is open. */
 	handleMediaTabVisibilityChange: (visible: boolean) => void;

@@ -1,12 +1,13 @@
 /* @jsxImportSource preact */
 
-import { findAndOpenFirstUserFile, useApplication, usePreviewSettings, useScenes, useSharedSettings, useSubscribableValue, useTimelineContext } from '@motion-canvas/ui';
+import { useContext } from 'preact/hooks';
+import { useApplication, useScenes, useSharedSettings } from '@motion-canvas/ui';
+
 import styles from './Timeline.module.scss';
-import { useMemo, useContext } from 'preact/hooks';
-import { TimelineContext } from './TimelineContext';
+
 import { PluginContext } from '../Context';
-import EventLabel from './EventLabel';
 import { MissingClip, SceneClip } from './Clip';
+import { TimelineContext } from './TimelineContext';
 
 export default function ClipsTrack() {
   const scenes = useScenes();
