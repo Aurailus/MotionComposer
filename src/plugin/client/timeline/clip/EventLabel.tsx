@@ -7,7 +7,6 @@ import { findAndOpenFirstUserFile, labelClipDraggingLeftSignal, useApplication }
 import styles from './Clip.module.scss';
 
 import { Clip } from '../../Types';
-import { PluginContext } from '../../Context';
 import { TimelineContext } from '../TimelineContext';
 
 interface Props {
@@ -17,7 +16,6 @@ interface Props {
 
 export default function EventLabel({ clip, event }: Props) {
   const { player } = useApplication();
-  const { getClipFrameRange } = useContext(PluginContext);
   const { framesToPixels, pixelsToFrames } = useContext(TimelineContext);
 
   // How long the event waits for before firing.
@@ -33,7 +31,7 @@ export default function EventLabel({ clip, event }: Props) {
   }
 
   function handleSeek() {
-    player.requestSeek(getClipFrameRange(clip)[0] + player.status.secondsToFrames(event.initialTime + event.offset));
+    player.requestSeek(clip.cache.clipRange[0] - clip.cache.startFrames + player.status.secondsToFrames(event.initialTime + event.offset));
   }
 
   async function handlePointerDown(e: PointerEvent) {

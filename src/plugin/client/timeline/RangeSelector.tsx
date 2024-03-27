@@ -1,15 +1,14 @@
 /* @jsxImportSource preact */
 
-import clsx from 'clsx';
 import { RefObject} from 'preact';
 import { useContext, useRef } from 'preact/hooks';
 import { useCallback, useEffect, useState } from 'preact/hooks';
-import { useApplication, useDuration, useKeyHold,
-	labelClipDraggingLeftSignal, MouseButton, DragIndicator, usePreviewSettings, useCurrentFrame, useSharedSettings, clamp, usePlayerTime } from '@motion-canvas/ui';
+import { useApplication, useDuration, labelClipDraggingLeftSignal,
+  MouseButton, DragIndicator, usePreviewSettings, useSharedSettings, clamp } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 
-import { PluginContext } from '../Context';
+import { useClips } from '../Contexts';
 import { TimelineContext } from './TimelineContext';
 
 export interface RangeSelectorProps {
@@ -22,7 +21,7 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
   const { range } = useSharedSettings();
   const duration = useDuration();
   const { fps } = usePreviewSettings();
-  const { clips, getClipFrameRange } = useContext(PluginContext);
+  const clips = useClips();
 
   const startFrame = player.status.secondsToFrames(range[0]);
   const endFrame = Math.min(player.status.secondsToFrames(range[1]), duration);
@@ -50,8 +49,7 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
       const playheadSeconds = player.status.framesToSeconds(pointerToFrames(evt.clientX));
       const clip = (clips()[0] ?? []).find(c => c.offset <= playheadSeconds && c.offset + c.length >= playheadSeconds);
       if (!clip) return;
-      const frameRange = getClipFrameRange(clip);
-      meta.shared.range.update(frameRange[0], frameRange[1], duration, fps);
+      meta.shared.range.update(clip.cache.clipRange[0], clip.cache.clipRange[1], duration, fps);
     }
 	}
 

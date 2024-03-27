@@ -1,11 +1,11 @@
 /* @jsxImportSource preact */
 
-import { useContext, useEffect } from 'preact/hooks';
+import { useEffect } from 'preact/hooks';
 import { Pane, PluginTabConfig, PluginTabProps, Tab } from '@motion-canvas/ui';
 
 import styles from './Media.module.scss';
 
-import { PluginContext } from '../Context';
+import { useUIContext } from '../Contexts';
 import MediaPane from './MediaPane';
 
 function MediaTabIcon({ tab }: PluginTabProps) {
@@ -18,10 +18,10 @@ function MediaTabIcon({ tab }: PluginTabProps) {
 
 function MediaTab() {
 	// Let the plugin know that the media tab is open.
-	const ctx = useContext(PluginContext);
+	const ctx = useUIContext();
 	useEffect(() => {
-		ctx.handleMediaTabVisibilityChange(true);
-		return () => ctx.handleMediaTabVisibilityChange(false);
+		ctx.updateMediaTabOpen(true);
+		return () => ctx.updateMediaTabOpen(false);
 	}, []);
 
 	// Render the media tab.

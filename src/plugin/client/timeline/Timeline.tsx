@@ -1,22 +1,20 @@
 /* @jsxImportSource preact */
 
+import { useSignal } from '@preact/signals';
+import { useLayoutEffect, useMemo, useRef, useContext } from 'preact/hooks';
 import { MouseButton, MouseMask, borderHighlight, clamp, labelClipDraggingLeftSignal, useApplication, useDuration, useKeyHold, usePlayerTime, usePreviewSettings, useScenes, useSharedSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
+
 import styles from './Timeline.module.scss';
 
+import { useStore } from '../Hooks';
 import AudioTrack from './AudioTrack';
-import { useSignal } from '@preact/signals';
-import { TimelineContext, TimelineContextData } from './TimelineContext';
-import { useLayoutEffect, useMemo, useRef, useContext } from 'preact/hooks';
-import { Timestamps } from './Timestamps';
 import { Playhead } from './Playhead';
-import { useSignalish } from '../Signalish';
-import { RangeSelector } from './RangeSelector';
-import { wrapper } from '@motion-canvas/2d';
-import { PluginContext } from '../Context';
-import { usePlayback } from '@motion-canvas/core';
-import { MissingClip, SceneClip } from './clip/Clip';
-import { useStore } from '../Util';
+import { useClips } from '../Contexts';
+import { Timestamps } from './Timestamps';
 import { Clip, copyClip } from '../Types';
+import { RangeSelector } from './RangeSelector';
+import { MissingClip, SceneClip } from './clip/Clip';
+import { TimelineContext, TimelineContextData } from './TimelineContext';
 
 const NUM_SNAP_FRAMES = 3;
 
@@ -41,7 +39,7 @@ export default function Timeline() {
 	const time = usePlayerTime();
   const scenes = useScenes();
   const { framesToPixels } = useContext(TimelineContext);
-  const { getClipFrameRange, clips }= useContext(PluginContext);
+  const clips = useClips();
 
 	const shiftHeld = useKeyHold('Shift');
 	const ctrlHeld = useKeyHold('Control');
@@ -56,7 +54,7 @@ export default function Timeline() {
 	const rect = useSize(wrapperRef);
 	const rangeRef = useRef<HTMLDivElement>();
 
-	const modifiedClips = useStore(() => clips().map(arr => [ ...arr ]));
+	const modifiedClips = useStore<Clip[][]>(() => clips().map(arr => [ ...arr ]));
 	useLayoutEffect(() => void modifiedClips(clips().map(arr => [ ...arr ])), [ clips ]);
 
 	const warnedAboutRange = useRef(false);
@@ -436,15 +434,13 @@ export default function Timeline() {
 							<div className={styles.clips_track}
 								style={{ width: framesToPixels(player.status.secondsToFrames(range[1])) }}>
 									{(modifiedClips()[0] ?? []).map(clip => {
-										const range = getClipFrameRange(clip);
-
 										switch (clip.type) {
 											case 'scene': {
 												const scene = scenes.find(s => s.name === clip.path);
 												if (!scene) break;
 												return (
 													<SceneClip
-														key={`${clip.type}\\${clip.path}`}
+														key={clip.uuid}
 														clip={clip}
 														onResize={(side, diff) => handleClipResize(clip, side, diff)}
 														onMove={(diff) => handleClipMove(clip, diff)}
@@ -456,7 +452,13 @@ export default function Timeline() {
 												break;
 											}
 										}
-										return <MissingClip clip={clip} range={range}/>;
+										return <MissingClip
+											key={clip.uuid}
+											clip={clip}
+											onResize={(side, diff) => handleClipResize(clip, side, diff)}
+											onMove={(diff) => handleClipMove(clip, diff)}
+											onCommit={handleClipCommit}
+										/>;
 									})}
 								</div>
 							<AudioTrack/>

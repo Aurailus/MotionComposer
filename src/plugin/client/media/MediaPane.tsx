@@ -9,7 +9,7 @@ import { Scene, Vector2, all, usePlayback } from '@motion-canvas/core';
 import styles from './Media.module.scss';
 
 import * as Icon from '../icon';
-import { PluginContext } from '../Context';
+import { useCurrentClip } from '../Contexts';
 
 const src = document.createElement('canvas');
 const srcCtx = src.getContext('2d')!;
@@ -23,7 +23,7 @@ const PREVIEW_FRAME_OFFSET = 30;
 function SceneItem({ scene }: { scene: Scene }) {
 	const { player } = useApplication();
 	const imgRef = useRef<HTMLImageElement>(null);
-	const { clip } = useContext(PluginContext);
+	const clip = useCurrentClip();
 
 	useLayoutEffect(() => {
 		async function genThumbnail() {

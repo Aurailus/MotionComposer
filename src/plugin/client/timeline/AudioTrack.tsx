@@ -1,18 +1,16 @@
 /* @jsxImportSource preact */
 
 import styles from './Timeline.module.scss';
-import { useContext } from 'preact/hooks';
-import { PluginContext } from '../Context';
+
+import { useClips } from '../Contexts';
 import { AudioClip, MissingClip } from './clip/Clip';
 
 export default function AudioTrack() {
-  const ctx = useContext(PluginContext);
-
-  const clips = ctx.clips();
+  const clips = useClips();
 
   return (
     <div className={styles.audio_track}>
-      {(clips[1] ?? []).map(clip => {
+      {(clips()[1] ?? []).map(clip => {
         switch (clip.type) {
           case 'audio': {
             return <AudioClip clip={clip} range={[ 0, 2000 ]} />;
@@ -21,7 +19,7 @@ export default function AudioTrack() {
             break;
           }
         }
-        return <MissingClip clip={clip} range={[ 0, 2000 ]}/>;
+        return <MissingClip clip={clip}/>;
       })}
     </div>
   );

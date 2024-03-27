@@ -6,11 +6,11 @@ import { ProjectMetadata, Scene } from '@motion-canvas/core';
 import { useApplication, useScenes, } from '@motion-canvas/ui';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'preact/hooks';
 
-import PluginSettings from './Settings';
-import { Clip } from './Types';
-import { ensure, getUUID, getUUIDNext, setUUIDNext, useStore } from './Util';
+import { ensure } from './Util';
 import { useSignalish } from './Signalish';
-import { PluginContext, PluginContextData } from './Context';
+import { Clip, PluginSettings } from './Types';
+import { getUUIDNext, setUUIDNext, useStore } from './Hooks';
+import { ClipsContext, CurrentClipContext, UIContext } from './Contexts';
 
 function metaPluginSettings(meta: ProjectMetadata) {
 	return {
@@ -301,31 +301,21 @@ export default function StateManager({ children }: { children: ComponentChildren
 		return cancel;
 	}, []);
 
-	const getClipFrameRange = useCallback((clip: Clip) => {
-		return clip.cache.clipRange;
-	}, []);
+	const uiContextData = useMemo(() => ({
+		mediaTabOpen: mediaTabVisible,
+		updateMediaTabOpen: setMediaTabVisible
+	}), [ mediaTabVisible ]);
 
-	const getClipScene = useCallback((clip: Clip) => {
-		return clip.cache.scene;
-	}, []);
-
-	const getSceneFrameLength = useCallback((scene: Scene) => {
-		return scene.lastFrame - scene.firstFrame;
-	}, []);
-
-
-	const ctx: PluginContextData = {
-		handleMediaTabVisibilityChange: setMediaTabVisible,
-		clips,
-		clip,
-		getClipFrameRange,
-		getClipScene,
-		getSceneFrameLength,
-	};
+	const clipsContextData = useMemo(() => ({ clips }), [ clips() ]);
+	const currentClipContextData = useMemo(() => ({ clip }), []);
 
 	return (
-		<PluginContext.Provider value={ctx}>
-			{children}
-		</PluginContext.Provider>
+		<UIContext.Provider value={uiContextData}>
+			<ClipsContext.Provider value={clipsContextData}>
+				<CurrentClipContext.Provider value={currentClipContextData}>
+					{children}
+				</CurrentClipContext.Provider>
+			</ClipsContext.Provider>
+		</UIContext.Provider>
 	);
 }

@@ -136,33 +136,6 @@ export default function Clip({ clip, ...props }: ClipProps) {
   );
 }
 
-
-
-interface MissingClipProps {
-	clip: Clip;
-	range: [ number, number ];
-}
-
-export function MissingClip({ clip, range }: MissingClipProps) {
-  const { framesToPixels, offset } = useContext(TimelineContext);
-	const { fps } = usePreviewSettings();
-
-	return (
-    <Clip
-			clip={clip}
-			range={range}
-    >
-			<div className={styles.container}>
-				<div
-					className={styles.name}
-				>
-					Missing Clip
-				</div>
-			</div>
-    </Clip>
-  );
-}
-
 const CANVAS_WIDTH = 1024;
 const CANVAS_HEIGHT = 24;
 const CHONKYNESS = 3;
@@ -255,3 +228,4 @@ export function AudioClip({ clip, range }: AudioClipProps) {
 }
 
 export { default as SceneClip } from './SceneClip';
+export { default as MissingClip } from './MissingClip';

@@ -2,6 +2,11 @@ import { Scene } from "@motion-canvas/core";
 
 export type ClipType = 'scene' | 'video' | 'image' | 'audio';
 
+export interface PluginSettings {
+	uuidNext: number;
+	clips: Clip[][];
+}
+
 export interface ClipSource {
 	type: ClipType;
 
