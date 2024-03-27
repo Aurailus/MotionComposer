@@ -55,15 +55,15 @@
           "type": "scene",
           "path": "Circle",
           "offset": 3.6666666666666665,
-          "start": 1.2666666666666666,
-          "length": 1.1666666666666667,
+          "start": 0.7333333333333333,
+          "length": 1.7,
           "volume": 1
         },
         {
           "uuid": 3,
           "type": "scene",
           "path": "Rectangle",
-          "offset": 4.833333333333333,
+          "offset": 5.366666666666666,
           "start": 0,
           "length": 3.033333333333333,
           "volume": 1
@@ -72,7 +72,7 @@
           "uuid": 4,
           "type": "scene",
           "path": "Square",
-          "offset": 7.866666666666666,
+          "offset": 8.4,
           "start": 0,
           "length": 2,
           "volume": 1

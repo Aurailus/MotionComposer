@@ -7,7 +7,6 @@ import { MouseButton, MouseMask, borderHighlight, clamp, labelClipDraggingLeftSi
 import styles from './Timeline.module.scss';
 
 import { useStore } from '../Hooks';
-import AudioTrack from './AudioTrack';
 import { Playhead } from './Playhead';
 import { useClips } from '../Contexts';
 import { Timestamps } from './Timestamps';
@@ -396,6 +395,10 @@ export default function Timeline() {
 		modifiedClips(newClips);
 	}
 
+	function handleDragClip(clip: Clip, side: 'left' | 'right' | 'replace') {
+		console.log(clip, side);
+	}
+
 	function handleClipCommit() {
 		clips(modifiedClips());
 	}
@@ -433,35 +436,39 @@ export default function Timeline() {
 							<Playhead seeking={seeking}/>
 							<div className={styles.clips_track}
 								style={{ width: framesToPixels(player.status.secondsToFrames(range[1])) }}>
-									{(modifiedClips()[0] ?? []).map(clip => {
-										switch (clip.type) {
-											case 'scene': {
-												const scene = scenes.find(s => s.name === clip.path);
-												if (!scene) break;
-												return (
-													<SceneClip
-														key={clip.uuid}
-														clip={clip}
-														onResize={(side, diff) => handleClipResize(clip, side, diff)}
-														onMove={(diff) => handleClipMove(clip, diff)}
-														onCommit={handleClipCommit}
-													/>
-												);
-											}
-											default: {
-												break;
-											}
+								{(modifiedClips()[0] ?? []).map(clip => {
+									switch (clip.type) {
+										case 'scene': {
+											const scene = scenes.find(s => s.name === clip.path);
+											if (!scene) break;
+											return (
+												<SceneClip
+													key={clip.uuid}
+													clip={clip}
+
+													onResize={(side, diff) => handleClipResize(clip, side, diff)}
+													onMove={(diff) => handleClipMove(clip, diff)}
+													onCommit={handleClipCommit}
+													onDragClip={(side) => handleDragClip(clip, side)}
+												/>
+											);
 										}
-										return <MissingClip
-											key={clip.uuid}
-											clip={clip}
-											onResize={(side, diff) => handleClipResize(clip, side, diff)}
-											onMove={(diff) => handleClipMove(clip, diff)}
-											onCommit={handleClipCommit}
-										/>;
-									})}
-								</div>
-							<AudioTrack/>
+										default: {
+											break;
+										}
+									}
+									return <MissingClip
+										key={clip.uuid}
+										clip={clip}
+
+										onResize={(side, diff) => handleClipResize(clip, side, diff)}
+										onMove={(diff) => handleClipMove(clip, diff)}
+										onCommit={handleClipCommit}
+										onDragClip={(side) => handleDragClip(clip, side)}
+									/>;
+								})}
+							</div>
+							{/* <AudioTrack/> */}
 							<div class={styles.scrub_line} ref={playheadRef}/>
 						</div>
 					</div>

@@ -4,7 +4,7 @@ import Circle from './scenes/Circle?scene';
 import Square from './scenes/Square?scene';
 import Rectangle from './scenes/Rectangle?scene';
 
-import MotionComposer from './plugin/client/main';
+import MotionComposer from './plugin/client';
 
 export default makeProject({
   scenes: [ Circle, Square, Rectangle ],

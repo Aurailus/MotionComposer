@@ -33,10 +33,11 @@ async function audio(path: string) {
 	});
 
 	return {
+		type: 'audio',
 		peaks,
 		name: path.slice(path.lastIndexOf('/') + 1),
 		path,
-		length: peaks.length / SAMPLE_INTERVAL
+		duration: peaks.length / SAMPLE_INTERVAL
 	};
 }
 
@@ -60,6 +61,7 @@ async function video(path: string) {
 
 	return {
 		...audioData,
+		type: 'video',
 		thumbnail
 	};
 }
@@ -73,9 +75,11 @@ async function image(path: string) {
 	const thumbnail = `data:image/x-png;base64,${buffer.toString('base64')}`;
 
 	return {
+		type: 'image',
 		name: path.slice(path.lastIndexOf('/') + 1),
 		path,
-		thumbnail
+		thumbnail,
+		duration: 0
 	};
 }
 

@@ -2,7 +2,7 @@ import { createContext } from 'preact';
 import { useContext, useState, useEffect } from 'preact/hooks';
 import { Signal } from '@preact/signals';
 
-import { Clip } from './Types';
+import { Clip, ClipSource } from './Types';
 import { Signalish } from './Signalish';
 
 export const ClipsContext = createContext<{ clips: Signalish<readonly Clip[][]> }>({} as any);
@@ -24,6 +24,8 @@ export interface UIContextData {
 	mediaTabOpen: boolean;
 
 	updateMediaTabOpen: (open: boolean) => void;
+
+	dragging: Signal<ClipSource>;
 }
 
 export const UIContext = createContext<UIContextData>({} as any);

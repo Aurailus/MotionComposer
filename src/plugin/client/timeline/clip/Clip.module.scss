@@ -13,6 +13,34 @@
   &:first-child { padding-left: calc(var(--clip-gap)); }
   &:last-child { padding-right: calc(var(--clip-gap)); }
 
+  .drop_targets {
+    --target-max-width: 32px;
+
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -4px;
+    bottom: -4px;
+    pointer-events: none;
+
+    .drop_target {
+      z-index: 1000;
+
+      &.left, &.right {
+        background-color: #0ff3;
+        max-width: var(--target-max-width);
+        flex-grow: 1.5;
+      }
+
+      &.replace {
+        background-color: #f003;
+        flex-grow: 1;
+      }
+    }
+  }
+
+
   // &.cropped_left {
   //   padding-left: 1px;
   //   .container { padding-left: 4px; }

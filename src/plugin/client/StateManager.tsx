@@ -8,7 +8,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } fr
 
 import { ensure } from './Util';
 import { useSignalish } from './Signalish';
-import { Clip, PluginSettings } from './Types';
+import { Clip, ClipSource, PluginSettings } from './Types';
 import { getUUIDNext, setUUIDNext, useStore } from './Hooks';
 import { ClipsContext, CurrentClipContext, UIContext } from './Contexts';
 
@@ -38,6 +38,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const sceneSubscriptions = useRef<Map<Scene, (() => void)>>(new Map());
 
 	const clip = useSignal<Clip | null>(null);
+
+	const dragging = useSignal<ClipSource | null>(null);
 
 	/**
 	 * Refresh cached clip data, including frame ranges and scene subscriptions.
@@ -125,7 +127,6 @@ export default function StateManager({ children }: { children: ComponentChildren
 		};
 
 		clip.value = clipsStore()?.[0]?.[0] ?? null;
-
 
 		/** Helper function to get the best clip for a current frame, and update the current clip & cached clip data. */
 
@@ -303,7 +304,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 	const uiContextData = useMemo(() => ({
 		mediaTabOpen: mediaTabVisible,
-		updateMediaTabOpen: setMediaTabVisible
+		updateMediaTabOpen: setMediaTabVisible,
+		dragging
 	}), [ mediaTabVisible ]);
 
 	const clipsContextData = useMemo(() => ({ clips }), [ clips() ]);

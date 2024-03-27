@@ -1,6 +1,20 @@
-import { Scene } from "@motion-canvas/core";
+import { Scene } from '@motion-canvas/core';
 
-export type ClipType = 'scene' | 'video' | 'image' | 'audio';
+import SceneClipItem from './media/SceneClipItem';
+import VideoClipItem from './media/VideoClipItem';
+import ImageClipItem from './media/ImageClipItem';
+import AudioClipItem from './media/AudioClipItem';
+
+export const ClipTypes = [ 'scene', 'video', 'image', 'audio' ] as const;
+
+export type ClipType = typeof ClipTypes[number];
+
+export const ClipSourceComponents: Record<ClipType, typeof SceneClipItem> = {
+	scene: SceneClipItem,
+	video: VideoClipItem,
+	image: ImageClipItem,
+	audio: AudioClipItem,
+} as const;
 
 export interface PluginSettings {
 	uuidNext: number;
@@ -8,15 +22,26 @@ export interface PluginSettings {
 }
 
 export interface ClipSource {
+	/** The type of the clip source. */
 	type: ClipType;
 
+	/** The path of the clip source (in the filesystem, or the Scene name if it's a scene clip source.) */
 	path: string;
 
+	/** The name of the clip source. */
+	name: string;
+
+	/** The duration of the clip source. */
+	duration: number;
+
+	/** A thumbnail image for the clip source, if one exists. */
 	thumbnail?: string;
 
+	/** The audio peaks of the clip source, if it has audio. */
 	peaks?: number[];
 
-	length: number;
+	/** The scene for this clip source, if the time is a scene. */
+	scene?: Scene;
 }
 
 export interface ClipInfo {
