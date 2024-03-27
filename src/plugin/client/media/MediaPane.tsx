@@ -3,12 +3,13 @@
 import { useScenes, MotionCanvas, usePlayerState, useApplication, formatDuration, Button, ButtonSelect, useStorage} from '@motion-canvas/ui';
 import clsx from 'clsx';
 import { VNode } from 'preact';
-import { useRef, useLayoutEffect, useEffect, useState, useMemo } from 'preact/hooks';
+import { useRef, useLayoutEffect, useEffect, useState, useMemo, useContext } from 'preact/hooks';
 import { Scene, Vector2, all, usePlayback } from '@motion-canvas/core';
 
 import styles from './Media.module.scss';
 
 import * as Icon from '../icon';
+import { PluginContext } from '../Context';
 
 const src = document.createElement('canvas');
 const srcCtx = src.getContext('2d')!;
@@ -22,29 +23,39 @@ const PREVIEW_FRAME_OFFSET = 30;
 function SceneItem({ scene }: { scene: Scene }) {
 	const { player } = useApplication();
 	const imgRef = useRef<HTMLImageElement>(null);
+	const { clip } = useContext(PluginContext);
 
 	useLayoutEffect(() => {
 		async function genThumbnail() {
-			const framesToRender = player.playback.frame - scene.firstFrame;
+	// 		console.log(clip.value.cache, player.playback.frame);
+	// 		const moveBackFrames = (clip.value && clip.value.cache.scene === scene)
+	// 			? player.playback.frame - clip.value.cache.clipRange[0]
+	// 			: 0;
 
-			scene.reset();
-			const size = scene.getSize();
+	// 		scene.reset();
+	// 		const size = scene.getSize();
 
-			const framesInScene = scene.lastFrame - scene.firstFrame;
-			const maxFrameOffset = Math.floor(framesInScene / 2);
-			for (let i = 0; i < Math.min(PREVIEW_FRAME_OFFSET, maxFrameOffset); i++) await scene.next();
+	// 		const framesInScene = scene.lastFrame - scene.firstFrame;
+	// 		const maxFrameOffset = Math.floor(framesInScene / 2);
+	// 		for (let i = 0; i < Math.min(PREVIEW_FRAME_OFFSET, maxFrameOffset); i++) await scene.next();
 
-			src.width = size.x;
-			src.height = size.y;
-			dst.width = PREVIEW_WIDTH * RESOLUTION_MULT;
-			dst.height = PREVIEW_WIDTH * (size.y / size.x) * RESOLUTION_MULT;
+	// 		src.width = size.x;
+	// 		src.height = size.y;
+	// 		dst.width = PREVIEW_WIDTH * RESOLUTION_MULT;
+	// 		dst.height = PREVIEW_WIDTH * (size.y / size.x) * RESOLUTION_MULT;
 
-			(scene as any).draw(srcCtx);
-			dstCtx.drawImage(src, 0, 0, dst.width, dst.height);
-			imgRef.current!.src = dst.toDataURL();
-			for (let i = 0; i < framesToRender; i++) await scene.next();
+	// 		(scene as any).draw(srcCtx);
+	// 		dstCtx.drawImage(src, 0, 0, dst.width, dst.height);
+	// 		imgRef.current!.src = dst.toDataURL();
+
+	// 		scene.reset();
+	// 		if (moveBackFrames) {
+	// 			console.log(moveBackFrames, framesInScene);
+	// 			for (let i = 0; i < moveBackFrames; i++) await scene.next();
+	// 		}
 		}
-		return scene.onCacheChanged.subscribe(genThumbnail);
+
+	// 	return scene.onCacheChanged.subscribe(genThumbnail);
 	}, [ imgRef.current, scene ]);
 
 	return (

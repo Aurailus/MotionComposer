@@ -1,0 +1,257 @@
+.clip {
+  --crop-left-url: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='6.4805' height='158.46' version='1.1' viewBox='0 0 1.7227 41.596' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m1.7227-0.26337v42.123h-1.7227l1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3182-1.2362-1.2362h-0.092935l0.046727-0.04621-0.046727-0.04673h0.092935l1.2362-1.2341-1.3177-1.3182 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3052-1.3052h-0.023883l0.011941-0.01194-0.011941-0.01194h0.023883l1.3052-1.3032-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3182 1.3177-1.3177-1.2346-1.2346h-0.094492l0.047246-0.04725-0.047246-0.04725h0.094492l1.2346-1.2325-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291z'/%3E%3C/svg%3E%0A");
+
+  --crop-right-url: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='6.4805' height='158.46' version='1.1' viewBox='0 0 1.7227 41.596' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m0-1.5925v42.123h1.7227l-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3182 1.2362-1.2362h0.092935l-0.046727-0.04621 0.046727-0.04673h-0.092935l-1.2362-1.2341 1.3177-1.3182-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3052-1.3052h0.023883l-0.011941-0.01194 0.011941-0.01194h-0.023883l-1.3052-1.3032 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3182-1.3177-1.3177 1.2346-1.2346h0.094492l-0.047246-0.04725 0.047246-0.04725h-0.094492l-1.2346-1.2325 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291z'/%3E%3C/svg%3E%0A");
+
+  --clip-gap: 6px;
+
+  top: 0;
+  position: absolute;
+
+	padding-left: calc(var(--clip-gap) / 2);
+  padding-right: calc(var(--clip-gap) / 2);
+  &:first-child { padding-left: calc(var(--clip-gap)); }
+  &:last-child { padding-right: calc(var(--clip-gap)); }
+
+  // &.cropped_left {
+  //   padding-left: 1px;
+  //   .container { padding-left: 4px; }
+
+  //   .clip_inner {
+  //     mask: var(--crop-left-url) top left/6.6px repeat-y,
+  //       linear-gradient(to right, transparent 0px, transparent 5.9px, black 6px, black 100%);
+  //   }
+  // }
+
+  // &.cropped_right {
+  //   padding-right: 0.5px;
+  //   &:has(+ .clip:not(.cropped_left)) { padding-right: 1px; }
+  //   .container { padding-right: 4px; }
+
+  //   .clip_inner {
+  //     mask: var(--crop-right-url) top right/6.6px repeat-y,
+  //       linear-gradient(to right, black 6px, black calc(100% - 6px), transparent calc(100% - 5.9px));
+  //   }
+  // }
+
+  // &.cropped_left.cropped_right {
+  //   .clip_inner {
+  //     mask: var(--crop-left-url) top left/6.6px repeat-y,
+  //       var(--crop-right-url) top right/6.6px repeat-y,
+  //       linear-gradient(to right, transparent, transparent 5.9px, black 6px, black calc(100% - 6px), transparent calc(100% - 5.9px));
+  //   }
+  // }
+
+
+  &:hover {
+    z-index: 100;
+
+    > .clip_wrapper > .label::before {
+      background-color: var(--theme);
+      font-weight: bold;
+    }
+
+    > .clip_wrapper > .label_backdrop {
+      background-color: var(--theme-overlay);
+    }
+
+    .clip_inner {
+      background-color: color-mix(in hsl, var(--surface-color-hover) 40%, var(--surface-color-light)) !important;
+    }
+  }
+
+  .clip_wrapper {
+    position: relative;
+    cursor: grab;
+    height: 100%;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    .clip_inner {
+      overflow: hidden;
+      height: 100%;
+			background-color: var(--surface-color-hover);
+			border-radius: var(--radius);
+			transition: background-color 0.15s;
+
+      .clip_container {
+        width: calc(100% - 16px);
+        height: 100%;
+        margin-left: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+
+        .clip_label {
+          display: grid;
+        }
+      }
+
+			.clip_drag {
+				position: absolute;
+				width: 4px;
+				height: 100%;
+				top: 0;
+				bottom: 0;
+				opacity: 0;
+				border-radius: 0px 4px 4px 0px;
+				transition: background-color 0.15s, opacity 0.15s;
+
+				&::before {
+					content: '';
+					display: block;
+					position: absolute;
+					top: 0;
+					bottom: 0;
+					left: -6px;
+					right: -3px;
+				}
+
+				background-color: rgba(255, 255, 255, 0.15);
+
+				&.can_extend {
+					background-color: color-mix(in hsl, var(--theme) 40%, transparent);
+				}
+
+				&:hover {
+					opacity: 1 !important;
+					// background-color: var(--theme);
+				}
+
+				&.left { transform: scaleX(-1); left: 0; cursor: w-resize; }
+				&.right { right: 0; cursor: e-resize; }
+
+				&:active {
+					opacity: 1;
+
+					background-color: var(--surface-color-light);
+					&.can_extend { background-color: var(--theme); }
+				}
+			}
+
+			&:hover .clip_drag {
+				opacity: 0.4;
+			}
+    }
+  }
+}
+
+.label {
+	position: absolute;
+	height: 32px;
+	padding: 2px;
+	cursor: pointer;
+	z-index: 5;
+
+	&:active {
+		cursor: grabbing;
+	}
+
+	&::before {
+		content: attr(data-name);
+		display: block;
+		border-radius: 0 14px 14px 14px;
+		padding: 0 8px;
+		font-weight: 500;
+		font-size: 14px;
+		background-color: color-mix(in hsl, white 18%, black);
+		color: color-mix(in hsl, white 40%, black);
+		// border: 2px solid var(--background-color);
+		border: 2px solid color-mix(in hsl, var(--surface-color) 30%, var(--background-color));
+		transition: color 0.15s, background-color 0.15s;
+	}
+
+	&:hover,
+	&:active {
+		&::before {
+			box-shadow: 0 0 0 2px white inset;
+		}
+		z-index: 10;
+	}
+}
+
+.label_backdrop {
+	box-sizing: content-box;
+	position: absolute;
+	height: 24px;
+	margin-top: 4px;
+	margin-left: 4px;
+	padding-right: 24px;
+	cursor: pointer;
+	border-radius: 0 0 12px 12px;
+	background-color: color-mix(in hsl, white 4%, transparent);
+	pointer-events: none;
+	transition: color 0.15s, background-color 0.15s;
+}
+
+.scene_clip {
+	height: 40px;
+
+  .scene_clip_label {
+    display: flex;
+    position: relative;
+    z-index: 10;
+    gap: 6px;
+    overflow: hidden;
+    max-width: 100%;
+    mask-image: linear-gradient(to right, black 0px, black calc(100% - 32px), transparent calc(100%));
+
+    svg {
+      width: 16px;
+      color: #fff5;
+      flex-shrink: 0;
+    }
+
+    .name {
+      flex-grow: 1;
+      overflow: hidden;
+      width: 1000px;
+			margin: 0;
+
+			.source {
+				cursor: pointer;
+				position: relative;
+				height: 100%;
+
+				&:hover {
+					text-decoration: underline;
+				}
+			}
+
+    }
+  }
+}
+
+.audio_clip {
+
+  .clip_handle::before {
+    color: color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
+  }
+
+  .audio_waveform {
+    padding: 4px;
+    fill: color-mix(in oklab, var(--theme) 20%, transparent);
+  }
+
+  .name {
+    color: color-mix(in oklab, var(--theme) 30%, white) !important;
+    text-shadow: 0px 0px 12px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
+    0px 0px 4px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
+    0px 0px 8px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
+    0px 0px 16px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
+    0px 0px 24px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
+    // font-weight: bold;
+    // background-color: color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
+    padding: 6px 12px 6px 0px !important;
+    // display: block;
+    z-index: 20;
+  }
+
+  .audio_container {
+    display: grid;
+    position: absolute;
+    top: 0;
+  }
+}

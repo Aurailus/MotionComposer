@@ -1,9 +1,8 @@
 /* @jsxImportSource preact */
 
-import { MouseButton, MouseMask, borderHighlight, clamp, labelClipDraggingLeftSignal, useApplication, useDuration, usePlayerTime, usePreviewSettings, useSharedSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
+import { MouseButton, MouseMask, borderHighlight, clamp, labelClipDraggingLeftSignal, useApplication, useDuration, useKeyHold, usePlayerTime, usePreviewSettings, useScenes, useSharedSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
 import styles from './Timeline.module.scss';
 
-import ClipsTrack from './ClipsTrack';
 import AudioTrack from './AudioTrack';
 import { useSignal } from '@preact/signals';
 import { TimelineContext, TimelineContextData } from './TimelineContext';
@@ -15,6 +14,11 @@ import { RangeSelector } from './RangeSelector';
 import { wrapper } from '@motion-canvas/2d';
 import { PluginContext } from '../Context';
 import { usePlayback } from '@motion-canvas/core';
+import { MissingClip, SceneClip } from './clip/Clip';
+import { useStore } from '../Util';
+import { Clip, copyClip } from '../Types';
+
+const NUM_SNAP_FRAMES = 3;
 
 const ZOOM_SPEED = 0.1;
 
@@ -31,10 +35,19 @@ const ZOOM_START_THRESHOLD = 48;
 export default function Timeline() {
 	const [ scale, setScale ] = useStorage('timeline-scale', 1);
 	const [ offset, setOffset ] = useStorage('timeline-offset', 0);
-	const time = usePlayerTime();
 	const { range } = useSharedSettings();
 	const { player } = useApplication();
 	const { fps } = usePreviewSettings();
+	const time = usePlayerTime();
+  const scenes = useScenes();
+  const { framesToPixels } = useContext(TimelineContext);
+  const { getClipFrameRange, clips }= useContext(PluginContext);
+
+	const shiftHeld = useKeyHold('Shift');
+	const ctrlHeld = useKeyHold('Control');
+
+	const snap = !shiftHeld;
+	const overwrite = ctrlHeld;
 
 	const duration = useDuration();
 	const tracksRef = useRef<HTMLDivElement>();
@@ -42,6 +55,9 @@ export default function Timeline() {
 	const playheadRef = useRef<HTMLDivElement>();
 	const rect = useSize(wrapperRef);
 	const rangeRef = useRef<HTMLDivElement>();
+
+	const modifiedClips = useStore(() => clips().map(arr => [ ...arr ]));
+	useLayoutEffect(() => void modifiedClips(clips().map(arr => [ ...arr ])), [ clips ]);
 
 	const warnedAboutRange = useRef(false);
 	const seeking = useSignal<number | null>(null);
@@ -227,6 +243,165 @@ export default function Timeline() {
 		}
 	}
 
+	function recomputeFromCache(clip: Clip) {
+		clip.length = player.status.framesToSeconds(clip.cache.lengthFrames);
+		clip.offset = player.status.framesToSeconds(clip.cache.clipRange[0]);
+		clip.start = player.status.framesToSeconds(clip.cache.startFrames);
+	}
+
+	function fixOverlap(channel: Clip[], newClip: Clip, oldClip: Clip) {
+		let toDelete = [];
+
+		if (overwrite) {
+			for (let i = 0; i < channel.length; i++) {
+				let clip = channel[i];
+
+				// Left side overlapping.
+				if (newClip.cache.clipRange[1] > clip.cache.clipRange[0] &&
+					newClip.cache.clipRange[0] < clip.cache.clipRange[0]) {
+
+					const repl = channel[i] = copyClip(clip);
+					const diff = newClip.cache.clipRange[1] - clip.cache.clipRange[0];
+					repl.cache.clipRange[0] = newClip.cache.clipRange[1];
+					repl.cache.startFrames += diff;
+					repl.cache.lengthFrames = repl.cache.clipRange[1] - repl.cache.clipRange[0];
+					recomputeFromCache(repl);
+
+					if (repl.cache.lengthFrames <= 0) toDelete.push(repl);
+				}
+
+				// Right side overlapping.
+				if (newClip.cache.clipRange[0] < clip.cache.clipRange[1] &&
+					newClip.cache.clipRange[1] > clip.cache.clipRange[1]) {
+
+					const repl = channel[i] = copyClip(clip);
+					repl.cache.clipRange[1] = newClip.cache.clipRange[0];
+					repl.cache.lengthFrames = repl.cache.clipRange[1] - repl.cache.clipRange[0];
+					recomputeFromCache(repl);
+
+					if (repl.cache.lengthFrames <= 0) toDelete.push(repl);
+				}
+			}
+		}
+		else {
+			// Bring things back left.
+			const backAmount = oldClip.cache.clipRange[0] - newClip.cache.clipRange[0];
+			if (backAmount > 0) {
+				let oldRange1 = oldClip.cache.clipRange[1];
+				for (let i = 1; i < channel.length; i++) {
+					let clip = channel[i];
+					if (clip.cache.clipRange[0] < oldRange1) continue;
+					if (clip.cache.clipRange[0] > oldRange1) break;
+
+					oldRange1 = clip.cache.clipRange[1];
+					const repl = channel[i] = copyClip(clip);
+					repl.cache.clipRange[0] -= backAmount;
+					repl.cache.clipRange[1] -= backAmount;
+					recomputeFromCache(repl);
+				}
+			}
+
+			// Push things right.
+			for (let i = 1; i < channel.length; i++) {
+				let clip = channel[i];
+				let prevClip = channel[i - 1];
+
+				if (prevClip.cache.clipRange[1] > clip.cache.clipRange[0]) {
+					const repl = channel[i] = copyClip(clip);
+					const diff = prevClip.cache.clipRange[1] - clip.cache.clipRange[0];
+					repl.cache.clipRange[0] += diff;
+					repl.cache.clipRange[1] += diff;
+					recomputeFromCache(repl);
+				}
+			}
+		}
+
+		for (let clip of toDelete) {
+			const ind = channel.indexOf(clip);
+			if (ind !== -1) channel.splice(ind, 1);
+		}
+	}
+
+	function handleClipResize(clip: Clip, side: 'left' | 'right', offset: number) {
+		const newClips = clips().map(arr => [ ...arr ]);
+		const newClipInd = newClips[0].findIndex(c => c.uuid === clip.uuid);
+		if (newClipInd === -1) return;
+		const oldClip = newClips[0][newClipInd];
+		const newClip = newClips[0][newClipInd] = copyClip(oldClip);
+
+		if (side === 'right') {
+			const maxNewPos = newClip.cache.sourceFrames - newClip.cache.startFrames + newClip.cache.clipRange[0];
+			let newPos = newClip.cache.clipRange[0] + newClip.cache.lengthFrames + offset;
+
+			if (snap) {
+				const nearbyClip = newClips[0].find(
+					c => Math.abs(c.cache.clipRange[0] - newPos) <= NUM_SNAP_FRAMES &&
+					c.cache.clipRange[0] <= maxNewPos);
+				if (nearbyClip) newPos = nearbyClip.cache.clipRange[0];
+			}
+
+			newPos = Math.min(newPos, maxNewPos);
+			newClip.cache.clipRange[1] = newPos;
+			newClip.cache.lengthFrames = newClip.cache.clipRange[1] - newClip.cache.clipRange[0];
+		}
+		else if (side === 'left') {
+			const oldPos = newClip.cache.clipRange[0];
+			const minNewPos = newClip.cache.clipRange[0] - newClip.cache.startFrames;
+			let newPos = newClip.cache.clipRange[0] + offset;
+
+			if (snap) {
+				const nearbyClip = newClips[0].find(c =>
+					Math.abs(c.cache.clipRange[1] - newPos) <= NUM_SNAP_FRAMES &&
+					c.cache.clipRange[1] >= minNewPos);
+				if (nearbyClip) newPos = nearbyClip.cache.clipRange[1];
+			}
+
+			newPos = Math.max(newPos, minNewPos);
+			const diff = newPos - oldPos;
+			newClip.cache.clipRange[0] = newPos;
+			newClip.cache.lengthFrames = newClip.cache.clipRange[1] - newClip.cache.clipRange[0];
+			newClip.cache.startFrames = Math.max(newClip.cache.startFrames + diff, 0);
+		}
+
+		recomputeFromCache(newClip);
+		fixOverlap(newClips[0], newClip, oldClip);
+		modifiedClips(newClips);
+	}
+
+	function handleClipMove(clip: Clip, offset: number) {
+		const newClips = clips().map(arr => [ ...arr ]);
+		const newClipInd = newClips[0].findIndex(c => c.uuid === clip.uuid);
+		if (newClipInd === -1) return;
+		const oldClip = newClips[0][newClipInd];
+		const newClip = newClips[0][newClipInd] = copyClip(oldClip);
+
+		let newPos = Math.max(newClip.cache.clipRange[0] + offset);
+
+		if (snap) {
+			const snapRight = newClips[0].find(c =>
+				Math.abs(c.cache.clipRange[0] - (newPos + newClip.cache.lengthFrames)) <= NUM_SNAP_FRAMES);
+			if (snapRight) newPos = snapRight.cache.clipRange[0] - newClip.cache.lengthFrames;
+			else {
+				const snapLeft = newClips[0].find(c =>
+					Math.abs(c.cache.clipRange[1] - newPos) <= NUM_SNAP_FRAMES);
+				if (snapLeft) newPos = snapLeft.cache.clipRange[1];
+			}
+		}
+
+		newPos = Math.max(newPos, 0);
+
+		newClip.cache.clipRange[0] = newPos;
+		newClip.cache.clipRange[1] = newPos + newClip.cache.lengthFrames;
+
+		recomputeFromCache(newClip);
+		fixOverlap(newClips[0], newClip, oldClip);
+		modifiedClips(newClips);
+	}
+
+	function handleClipCommit() {
+		clips(modifiedClips());
+	}
+
 	return (
 		<TimelineContext.Provider value={state}>
 			<div class={styles.timeline}>
@@ -258,7 +433,32 @@ export default function Timeline() {
 							<RangeSelector rangeRef={rangeRef}/>
 							<Timestamps/>
 							<Playhead seeking={seeking}/>
-							<ClipsTrack/>
+							<div className={styles.clips_track}
+								style={{ width: framesToPixels(player.status.secondsToFrames(range[1])) }}>
+									{(modifiedClips()[0] ?? []).map(clip => {
+										const range = getClipFrameRange(clip);
+
+										switch (clip.type) {
+											case 'scene': {
+												const scene = scenes.find(s => s.name === clip.path);
+												if (!scene) break;
+												return (
+													<SceneClip
+														key={`${clip.type}\\${clip.path}`}
+														clip={clip}
+														onResize={(side, diff) => handleClipResize(clip, side, diff)}
+														onMove={(diff) => handleClipMove(clip, diff)}
+														onCommit={handleClipCommit}
+													/>
+												);
+											}
+											default: {
+												break;
+											}
+										}
+										return <MissingClip clip={clip} range={range}/>;
+									})}
+								</div>
 							<AudioTrack/>
 							<div class={styles.scrub_line} ref={playheadRef}/>
 						</div>

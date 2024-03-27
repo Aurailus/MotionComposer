@@ -1,32 +1,28 @@
 /* @jsxImportSource preact */
 
-import styles from './Timeline.module.scss';
-
-import { type Scene } from '@motion-canvas/core';
 import { useLayoutEffect, useState, useContext } from 'preact/hooks';
 import type { TimeEvent } from '@motion-canvas/core/lib/scenes/timeEvents';
-import { TimelineContext } from './TimelineContext';
 import { findAndOpenFirstUserFile, labelClipDraggingLeftSignal, useApplication } from '@motion-canvas/ui';
-import { Clip } from '../Types';
-import { PluginContext } from '../Context';
 
-interface EventLabelProps {
-  event: TimeEvent;
-  scene: Scene;
+import styles from './Clip.module.scss';
+
+import { Clip } from '../../Types';
+import { PluginContext } from '../../Context';
+import { TimelineContext } from '../TimelineContext';
+
+interface Props {
   clip: Clip;
-  offset?: number;
+  event: TimeEvent;
 }
 
-export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabelProps) {
+export default function EventLabel({ clip, event }: Props) {
   const { player } = useApplication();
   const { getClipFrameRange } = useContext(PluginContext);
   const { framesToPixels, pixelsToFrames } = useContext(TimelineContext);
 
-  const startSec = clip.start;
-
   // How long the event waits for before firing.
   const [ eventTime, setEventTime ] = useState(event.offset);
-  useLayoutEffect(() => setEventTime(event.offset), [event.offset]);
+  useLayoutEffect(() => setEventTime(event.offset), [ event.offset ]);
 
   // If the mouse is down on this element, whether or not the event has been moved yet.
   const [ moved, setMoved ] = useState(false);
@@ -82,7 +78,7 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
     if (moved) {
       const newFrame = Math.max(0, eventTime);
       setEventTime(newFrame);
-      if (event.offset !== newFrame) scene.timeEvents.set(event.name, newFrame, e.shiftKey);
+      if (event.offset !== newFrame) clip.cache.scene.timeEvents.set(event.name, newFrame, e.shiftKey);
     }
 
     // Else, seek to it.
@@ -96,8 +92,8 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
       <div
         class={styles.label}
         data-name={event.name}
-        style={{ left: `${framesToPixels(scene.playback.secondsToFrames(
-          event.initialTime - startSec + Math.max(0, eventTime)) - offset) - 4}px` }}
+        style={{ left: `${framesToPixels(player.status.secondsToFrames(
+          event.initialTime - clip.start + Math.max(0, eventTime))) - 4}px` }}
 
         onDblClick={handleGoToSource}
         onPointerDown={handlePointerDown}
@@ -108,8 +104,9 @@ export default function EventLabel({ event, scene, clip, offset = 0 }: EventLabe
       <div
         className={styles.label_backdrop}
         style={{
-          left: `${framesToPixels(scene.playback.secondsToFrames(event.initialTime - startSec) - offset) - 2}px`,
-          width: `${Math.max(0, framesToPixels(scene.playback.secondsToFrames(eventTime)))}px`,
+          left: `${framesToPixels(player.status.secondsToFrames(
+            event.initialTime - clip.start)) - 4}px`,
+          width: `${Math.max(0, framesToPixels(player.status.secondsToFrames(eventTime)))}px`,
         }}
       />
     </>

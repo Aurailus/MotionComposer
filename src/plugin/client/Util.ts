@@ -1,5 +1,5 @@
 import { MutableRefObject } from 'preact/compat';
-import { useCallback, useState } from 'preact/hooks';
+import { useCallback, useState, useMemo } from 'preact/hooks';
 
 export function ensure<T = any>(condition: T, message: string): asserts condition {
 	if (!condition) throw new Error(message);
@@ -35,4 +35,22 @@ export function useStore<T>(initial: T | (() => T)): Store<T> {
 	}, []);
 
 	return fn as Store<T>;
+}
+
+let uuidNext = 0;
+
+export function setUUIDNext(next: number) {
+	uuidNext = next;
+}
+
+export function getUUIDNext() {
+	return uuidNext;
+}
+
+export function getUUID() {
+	return uuidNext++;
+}
+
+export function useUUID() {
+	return useMemo(() => getUUID(), []);
 }

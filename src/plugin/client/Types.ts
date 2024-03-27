@@ -2,6 +2,18 @@ import { Scene } from "@motion-canvas/core";
 
 export type ClipType = 'scene' | 'video' | 'image' | 'audio';
 
+export interface ClipSource {
+	type: ClipType;
+
+	path: string;
+
+	thumbnail?: string;
+
+	peaks?: number[];
+
+	length: number;
+}
+
 export interface ClipInfo {
 	/** The number of frames into the scene that this clip should start at. */
 	startFrames: number;
@@ -20,6 +32,8 @@ export interface ClipInfo {
 }
 
 export interface Clip {
+	/** A unique UUID for the clip. */
+	uuid: number;
 
 	/** The type of this clip. */
 	type: ClipType;
@@ -41,4 +55,12 @@ export interface Clip {
 
 	/** Cached clip info. */
 	cache?: ClipInfo;
+}
+
+export function copyClip(clip: Clip): Clip {
+	const cacheSafe = { ...clip.cache };
+	delete cacheSafe.scene;
+	const newClip = JSON.parse(JSON.stringify({ ...clip, cache: cacheSafe }));
+	newClip.cache.scene = clip.cache.scene;
+	return newClip;
 }

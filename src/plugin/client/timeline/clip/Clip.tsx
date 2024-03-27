@@ -1,158 +1,142 @@
 /* @jsxImportSource preact */
 
-import { Scene } from '@motion-canvas/core';
-import { useContext, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { findAndOpenFirstUserFile, useApplication, usePreviewSettings, useSubscribableValue } from '@motion-canvas/ui';
-
-import styles from './Timeline.module.scss';
-
-import { Clip } from '../Types';
-import * as Icon from '../icon';
-import { TimelineContext } from './TimelineContext';
-import EventLabel from './EventLabel';
-import { ComponentChildren, VNode } from 'preact';
 import clsx from 'clsx';
+import { ComponentChildren, VNode } from 'preact';
+import { useContext, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useApplication, usePreviewSettings, useSubscribableValue } from '@motion-canvas/ui';
+
+import styles from './Clip.module.scss';
+
+import { Clip, copyClip } from '../../Types';
+import { Store } from '../../Util';
+import { TimelineContext } from '../TimelineContext';
+
+export interface ClipChildProps {
+	clip: Clip;
+
+	onMove: (frames: number) => void;
+	onResize: (side: 'left' | 'right', offset: number) => void;
+	onCommit: () => void;
+}
 
 interface ClipProps {
 	clip: Clip;
-	range: [ number, number ];
-	cropped: [ boolean, boolean ];
-	class?: string;
 
-	children?: ComponentChildren | ((range: [ number, number ]) => ComponentChildren);
+	onMove: (frames: number) => void;
+	onResize: (side: 'left' | 'right', offset: number) => void;
+	onCommit: () => void;
+
+	attachedChildren?: ComponentChildren;
 	labelChildren?: ComponentChildren;
+
+	class?: string;
 }
 
-function Clip(props: ClipProps) {
+export default function Clip({ clip, ...props }: ClipProps) {
   const { player, meta } = useApplication();
   const { framesToPixels, pixelsToFrames, offset } = useContext(TimelineContext);
 
-  const labelStyle = useMemo(() => {
-    const sceneOffset = framesToPixels(props.range[0]);
-    return offset > sceneOffset ? { paddingLeft: `${offset - sceneOffset}px`} : {};
-  }, [ offset, props.range[0], framesToPixels]);
-
-	const [ range, setRange ] = useState<[ number, number ]>([ props.range[0], props.range[1] ]);
 	const moveSide = useRef<'left' | 'right'>('left');
+	const moveOffset = useRef(0);
 
 	function handleSeek(e: MouseEvent) {
 		e.stopPropagation();
 		meta.shared.range.set([
-			player.status.framesToSeconds(props.range[0]),
-			player.status.framesToSeconds(props.range[1]),
+			player.status.framesToSeconds(clip.cache.clipRange[0]),
+			player.status.framesToSeconds(clip.cache.clipRange[1]),
 		]);
 	}
 
-	function handleMouseDown(e: MouseEvent) {
-		if (e.button === 1) e.preventDefault();
-	}
-
-	function handleMouseUp(e: MouseEvent) {
-		if (e.button === 1) handleSeek(e);
-	}
-
-	function handlePointerDown(e: PointerEvent, side: 'left' | 'right') {
+	function handleMoveStart(e: PointerEvent) {
 		e.preventDefault();
+		e.stopPropagation();
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		moveOffset.current = 0;
+	}
+
+	function handleMoveMove(e: PointerEvent) {
+		if (!(e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		moveOffset.current += pixelsToFrames(e.movementX);
+		props.onMove(Math.round(moveOffset.current));
+	}
+
+	function handleMoveEnd(e: PointerEvent) {
+		props.onCommit();
+		(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+	}
+
+	function handleResizeStart(e: PointerEvent, side: 'left' | 'right') {
+		e.preventDefault();
+		e.stopPropagation();
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 		moveSide.current = side;
+		moveOffset.current = 0;
 	}
 
-	function handlePointerMove(e: PointerEvent) {
+	function handleResizeMove(e: PointerEvent) {
 		if (!(e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) return;
+		e.preventDefault();
 		e.stopPropagation();
-		const diff = pixelsToFrames(e.movementX);
-		const newRange: [ number, number ] = [ range[0], range[1] ];
-		if (moveSide.current === 'left') newRange[0] = range[0] + diff;
-		else newRange[1] = range[1] + diff;
-		setRange(newRange);
+
+		moveOffset.current += pixelsToFrames(e.movementX);
+		props.onResize(moveSide.current, Math.round(moveOffset.current));
 	}
 
-	function handlePointerUp(e: PointerEvent) {
-		if (e.button !== 0) return;
+	function handleResizeEnd(e: PointerEvent) {
+		props.onCommit();
 		(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-		setRange([ props.range[0], props.range[1] ]);
 	}
 
-	const width = framesToPixels(range[1] - range[0] + 1);
+	const width = framesToPixels(clip.cache.clipRange[1] - clip.cache.clipRange[0]);
+
+	const croppedLeft = clip.start > 0;
+	const croppedRight = clip.cache.lengthFrames < clip.cache.sourceFrames - clip.cache.startFrames;
 
   return (
     <div
-      class={clsx(styles.clip, props.class, props.cropped[0] && styles.cropped_left,
-				props.cropped[1] && styles.cropped_right)}
-
-      style={{ width: `${width}px`, left: `${framesToPixels(range[0])}px` }}
+      class={clsx(styles.clip, props.class,
+				croppedLeft && styles.cropped_left,
+				croppedRight && styles.cropped_right
+			)}
+      style={{ width: `${width}px`, left: `${framesToPixels(clip.cache.clipRange[0])}px` }}
     >
-			<div class={styles.clip_inner}>
+			<div class={styles.clip_wrapper}>
 				<div
-					class={styles.clip_handle}
-					onMouseDown={handleMouseDown}
-					onMouseUp={handleMouseUp}
+					class={styles.clip_inner}
+					onPointerDown={handleMoveStart}
+					onPointerMove={handleMoveMove}
+					onPointerUp={handleMoveEnd}
 				>
-
-					<div className={styles.container}>
-						<div className={styles.label} style={labelStyle}>
+					<div className={styles.clip_container}>
+						<div className={styles.clip_label} style={{
+    					paddingLeft: `${Math.max(offset - framesToPixels(clip.cache.clipRange[0]), 0)}px`
+						}}>
 							{props.labelChildren}
 						</div>
 					</div>
 
-					{typeof props.children === 'function' ? props.children(range) : props.children}
-
-					<div class={clsx(styles.range_select, styles.left)}
-						onPointerDown={(e) => handlePointerDown(e, 'left')}
-						onPointerMove={handlePointerMove}
-						onPointerUp={handlePointerUp}
+					<div class={clsx(styles.clip_drag, styles.left, croppedLeft && styles.can_extend)}
+						onPointerDown={(e) => handleResizeStart(e, 'left')}
+						onPointerMove={handleResizeMove}
+						onPointerUp={handleResizeEnd}
 					/>
-					<div class={clsx(styles.range_select, styles.right)}
-						onPointerDown={(e) => handlePointerDown(e, 'right')}
-						onPointerMove={handlePointerMove}
-						onPointerUp={handlePointerUp}
+					<div class={clsx(styles.clip_drag, styles.right, croppedRight && styles.can_extend)}
+						onPointerDown={(e) => handleResizeStart(e, 'right')}
+						onPointerMove={handleResizeMove}
+						onPointerUp={handleResizeEnd}
 					/>
 	      </div>
+
+				{props.attachedChildren}
 			</div>
     </div>
   );
 }
 
-interface SceneClipProps {
-	scene: Scene;
-	clip: Clip;
-	range: [ number, number ];
-}
 
-export function SceneClip({ scene, clip, range }: SceneClipProps) {
-  const events = useSubscribableValue(scene.timeEvents.onChanged);
-	const { player } = useApplication();
-
-	async function handleGoToSource(e: MouseEvent) {
-		e.stopPropagation();
-		if (!scene.creationStack) return;
-		await findAndOpenFirstUserFile(scene.creationStack);
-	}
-
-	return (
-    <Clip
-			clip={clip}
-			range={range}
-			cropped={[ clip.start !== 0,
-				clip.start + clip.length < player.status.framesToSeconds(scene.lastFrame - scene.firstFrame) ]}
-			labelChildren={
-				<div class={styles.scene_clip_label}>
-					<Icon.Scene/>
-					<div className={styles.name} title='Go to source'
-						onPointerDown={e => e.stopPropagation()}
-						onPointerUp={handleGoToSource}>
-						{scene.name}
-					</div>
-				</div>
-			}>
-				{(xRange) => {
-					return events
-					.filter(event => xRange[1] === 0 || player.status.secondsToFrames(event.initialTime) < xRange[1])
-					.map(event => <EventLabel key={event.name} event={event} scene={scene} clip={clip} offset={xRange[0] - range[0]}/>)}
-				}
-    </Clip>
-  );
-}
 
 interface MissingClipProps {
 	clip: Clip;
@@ -269,3 +253,5 @@ export function AudioClip({ clip, range }: AudioClipProps) {
     </Clip>
   );
 }
+
+export { default as SceneClip } from './SceneClip';

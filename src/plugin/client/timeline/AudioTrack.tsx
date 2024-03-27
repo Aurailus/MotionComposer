@@ -3,7 +3,7 @@
 import styles from './Timeline.module.scss';
 import { useContext } from 'preact/hooks';
 import { PluginContext } from '../Context';
-import { AudioClip, MissingClip } from './Clip';
+import { AudioClip, MissingClip } from './clip/Clip';
 
 export default function AudioTrack() {
   const ctx = useContext(PluginContext);

@@ -137,7 +137,7 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
         onDblClick={handleResetOrClampRange}
       >
         <RangeHandle value={start} setValue={setStart} onDrop={handleCommitRange} />
-        <div class={styles.handleSpacer} />
+        <div class={styles.spacer} />
         <RangeHandle value={end} setValue={setEnd} onDrop={handleCommitRange} />
       </div>
     </div>

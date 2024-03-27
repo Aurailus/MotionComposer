@@ -4,11 +4,11 @@ import { ComponentChildren } from 'preact';
 import { useSignal } from '@preact/signals';
 import { ProjectMetadata, Scene } from '@motion-canvas/core';
 import { useApplication, useScenes, } from '@motion-canvas/ui';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'preact/hooks';
 
 import PluginSettings from './Settings';
 import { Clip } from './Types';
-import { ensure, useStore } from './Util';
+import { ensure, getUUID, getUUIDNext, setUUIDNext, useStore } from './Util';
 import { useSignalish } from './Signalish';
 import { PluginContext, PluginContextData } from './Context';
 
@@ -28,7 +28,11 @@ export default function StateManager({ children }: { children: ComponentChildren
 
   const scenes = useScenes();
 	const { project, player } = useApplication();
-	const settings = metaPluginSettings(project.meta);
+	const settings = useMemo(() => {
+		const settings = metaPluginSettings(project.meta)
+		setUUIDNext(settings.get('uuidNext') ?? 0);
+		return settings;
+	}, [ project.meta ]);
 
 	const clipsStore = useStore<Clip[][]>([]);
 	const sceneSubscriptions = useRef<Map<Scene, (() => void)>>(new Map());
@@ -59,14 +63,14 @@ export default function StateManager({ children }: { children: ComponentChildren
 				const startFrames = scene.playback.secondsToFrames(clip.start);
 				const lengthFrames = scene.playback.secondsToFrames(clip.length);
 
-				ensure(offsetFrames > lastEndFrames, 'Clips must not overlap.');
-				lastEndFrames = offsetFrames + lengthFrames - 1;
+				ensure(offsetFrames >= lastEndFrames, 'Clips must not overlap.');
+				lastEndFrames = offsetFrames + lengthFrames;
 
-				const clipRange = [ offsetFrames, offsetFrames + lengthFrames - 1 ] as [ number, number ];
+				const clipRange = [ offsetFrames, offsetFrames + lengthFrames ] as [ number, number ];
 
 				ensure(startFrames >= 0 && startFrames < sourceFrames,
 					'Clip start out of bounds.');
-				ensure(lengthFrames > 0 && startFrames + lengthFrames < sourceFrames,
+				ensure(lengthFrames > 0 && startFrames + lengthFrames <= sourceFrames,
 					'Clips length out of bounds.')
 				ensure(clipRange[0] >= 0 && clipRange[1] > clipRange[0],
 					'Clip must not end before it begins.');
@@ -76,7 +80,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 					lengthFrames,
 					startFrames,
 					sourceFrames,
-					scene,
+					scene
 				};
 
 				if (hangingScenes.has(scene)) hangingScenes.delete(scene);
@@ -104,6 +108,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 		clipsStore(clips);
 		cacheClipData(true);
 		settings.set('clips', [ ...clips ].map(channel => [ ...channel.map(clip => ({ ...clip, cache: undefined })) ]));
+		settings.set('uuidNext', getUUIDNext());
 		return clips;
 	}, []));
 
@@ -115,7 +120,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 			length: 1,
 			offset: 0,
 			start: 0,
-			volume: 0
+			volume: 0,
+			uuid: -1
 		};
 
 		clip.value = clipsStore()?.[0]?.[0] ?? null;
@@ -132,7 +138,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 			for (let candidate of clips) {
 				ensure(candidate.cache, 'Uncached clip found!');
 				if (candidate.cache.clipRange[1] < frame) prev = candidate;
-				if (frame >= candidate.cache.clipRange[0] && frame < candidate.cache.clipRange[1] + 1) {
+				if (frame >= candidate.cache.clipRange[0] && frame < candidate.cache.clipRange[1]) {
 					clip.value = candidate;
 					return clip.value;
 				}
@@ -144,8 +150,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 			clip.value = EMPTY_TIMELINE_CLIP;
 			const clipRange: [ number, number ] = [
-				prev ? prev.cache.clipRange[1] + 1 : 0,
-				next ? next.cache.clipRange[0] - 1 : (player as any).endFrame ];
+				prev ? prev.cache.clipRange[1] : 0,
+				next ? next.cache.clipRange[0] : (player as any).endFrame ];
 			clip.value.cache = {
 				clipRange,
 				lengthFrames: clipRange[1] - clipRange[0],
@@ -168,7 +174,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 		/** Override PlaybackManager.getNextScene() method to find the clip's next scene. */
 
 		(player.playback as any).getNextScene = (function() {
-			getBestClip(clip.value?.cache.clipRange[1] + 1 ?? 0);
+			getBestClip(clip.value?.cache.clipRange[1] ?? 0);
 			if (!clip.value) return null;
 			return clip.value.cache.scene;
 		}).bind(player.playback);
@@ -205,7 +211,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 			if (this.previousScene && this.currentScene.isAfterTransitionIn()) this.previousScene = null;
 
 			// If the current scene is over, or the current clip is over, locate the next scene and move to it.
-			if (this.currentScene.canTransitionOut() || this.frame > clip.value.cache.clipRange[1]) {
+			if (this.currentScene.canTransitionOut() || this.frame >= clip.value.cache.clipRange[1]) {
 				this.previousScene = this.currentScene;
 				const nextScene = this.getNextScene(this.previousScene);
 				if (nextScene) {
@@ -222,6 +228,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 		/** Override PlaybackManager.seek() method to swap to the right clip and shift its start frame. */
 
 		(player.playback as any).seek = (async function (frame: number) {
+
 			// Frame is too high, we need to skip back to the start.
 			if (this.frame > frame) {
 				// Update the current scene if we need to.
