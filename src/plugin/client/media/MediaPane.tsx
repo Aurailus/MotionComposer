@@ -8,56 +8,52 @@ import { useScenes, Button, useStorage, useApplication} from '@motion-canvas/ui'
 import styles from './Media.module.scss';
 
 import * as Icon from '../icon';
+import { useUIContext } from '../Contexts';
 import { ClipSource, ClipSourceComponents, ClipTypes } from '../Types';
-import SceneClipItem from './SceneClipItem';
-import AudioClipItem from './AudioClipItem';
-import VideoClipItem from './VideoClipItem';
-import ImageClipItem from './ImageClipItem';
-
-const AUDIO_FILES = import.meta.glob(`/media/*.(wav|mp3|ogg|flac)`);
-const VIDEO_FILES = import.meta.glob(`/media/*.(mp4|mkv|webm)`);
-const IMAGE_FILES = import.meta.glob(`/media/*.(png|jpg|jpeg|webp)`);
+import { Vector2 } from '@motion-canvas/core';
+import { useSources } from '../Sources';
 
 export default function MediaPane() {
-  const scenes = useScenes();
-	const { player } = useApplication();
+	const uiCtx = useUIContext()
+	const clipSources = useSources();
 
 	const [ view, setView ] = useStorage<'lg' | 'md' | 'sm' | 'list'>('md');
 
-	const [ clipSources, setClipSources ] = useState<ClipSource[]>([]);
+	useEffect(() => {
+		if (uiCtx.addSource.value === null) return;
 
-	const replaceSourcesOfType = useCallback((type: string, insert: ClipSource[]) => {
-		setClipSources(clipSources => [
-			...clipSources.filter(s => s.type !== type),
-			...insert,
-		]);
-	}, [])
+		const onDragMove = (evt: PointerEvent) => {
+			console.log('move');
+		}
 
-	useEffect(() => void Promise.all(Object.values(AUDIO_FILES).map(async (f) =>
-		(await f() as any).default)).then(sources => replaceSourcesOfType('audio', sources)), []);
-	useEffect(() => void Promise.all(Object.values(VIDEO_FILES).map(async (f) =>
-		(await f() as any).default)).then(sources => replaceSourcesOfType('video', sources)), []);
-	useEffect(() => void Promise.all(Object.values(IMAGE_FILES).map(async (f) =>
-		(await f() as any).default)).then(sources => replaceSourcesOfType('image', sources)), [])
-	useEffect(() => void replaceSourcesOfType('scene', scenes.filter(({ name }) =>
-		name !== 'EmptyTimelineScene' && name !== 'MissingClipScene').map(scene => ({
-		type: 'scene',
-		path: scene.name,
-		name: scene.name,
-		duration: player.status.framesToSeconds(scene.lastFrame - scene.firstFrame),
- 	}))), [ scenes ]);
+		const onDragEnd = (evt: PointerEvent) => {
+			console.log('end');
+		}
+
+		window.addEventListener('pointermove', onDragMove);
+		window.addEventListener('pointerup', onDragEnd);
+
+		return () => {
+			window.removeEventListener('pointermove', onDragMove);
+			window.removeEventListener('pointerup', onDragEnd);
+		}
+	}, [ uiCtx.addSource.value ]);
 
 	const clipSourceElements = useMemo(() => {
-		function onDragStart(source: ClipSource) {
+		function onDragStart(source: ClipSource, evt: PointerEvent) {
 			console.log('dragStart');
+			uiCtx.addSource.value = source;
+			uiCtx.addSourceDragPos.value = new Vector2(evt.clientX, evt.clientY);
 		}
 
-		function onDragMove(source: ClipSource) {
+		function onDragMove(source: ClipSource, evt: PointerEvent) {
 			console.log('dragMove');
+			uiCtx.addSourceDragPos.value = new Vector2(evt.clientX, evt.clientY);
 		}
 
-		function onDragEnd(source: ClipSource) {
+		function onDragEnd(source: ClipSource, evt: PointerEvent) {
 			console.log('dragEnd');
+			uiCtx.addSource.value = null;
 		}
 
 		return clipSources
@@ -68,9 +64,9 @@ export default function MediaPane() {
 					<Component
 						key={s.path}
 						source={s}
-						onDragStart={() => onDragStart(s)}
-						onDragMove={() => onDragMove(s)}
-						onDragEnd={() => onDragEnd(s)}
+						onDragStart={(evt) => onDragStart(s, evt)}
+						// onDragMove={(evt) => onDragMove(s, evt)}
+						// onDragEnd={(evt) => onDragEnd(s, evt)}
 					/>
 				);
 			});

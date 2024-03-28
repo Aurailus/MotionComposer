@@ -14,7 +14,7 @@
   &:last-child { padding-right: calc(var(--clip-gap)); }
 
   .drop_targets {
-    --target-max-width: 32px;
+    --target-max-width: 12px;
 
     display: flex;
     position: absolute;
@@ -22,20 +22,64 @@
     right: 0;
     top: -4px;
     bottom: -4px;
-    pointer-events: none;
 
     .drop_target {
       z-index: 1000;
+      opacity: 0.3;
+
+      &:hover { opacity: 1; }
 
       &.left, &.right {
-        background-color: #0ff3;
         max-width: var(--target-max-width);
         flex-grow: 1.5;
+
+        &::after {
+          content: ' ';
+          position: absolute;
+          height: calc(100% - 8px);
+          width: 2px;
+          background-color: var(--theme);
+          z-index: 10000;
+          top: 4px;
+          opacity: 0;
+          border-radius: 4px;
+          pointer-events: none;
+        }
+
+        &:hover::after {
+          opacity: 0.6;
+        }
+
+        &.left::after {
+          left: -1px;
+        }
+
+        &.right::after {
+          right: -1px;
+        }
       }
 
       &.replace {
-        background-color: #f003;
         flex-grow: 1;
+
+        &::after {
+          content: ' ';
+          position: absolute;
+          height: calc(100% - 8px);
+          width: calc(100% - 8px);
+          border: 2px solid var(--theme);
+          z-index: 10000;
+          box-sizing: border-box;
+          top: 4px;
+          left: 4px;
+          opacity: 0;
+          border-radius: 4px;
+          pointer-events: none;
+        }
+
+        &:hover::after {
+          opacity: 0.6;
+        }
       }
     }
   }
@@ -71,7 +115,7 @@
   // }
 
 
-  &:hover {
+  &:not(.add_source):hover {
     z-index: 100;
 
     > .clip_wrapper > .label::before {
@@ -112,9 +156,9 @@
         display: flex;
         align-items: center;
 
-        .clip_label {
-          display: grid;
-        }
+        // .clip_label {
+        //   display: grid;
+        // }
       }
 
 			.clip_drag {
@@ -214,46 +258,46 @@
 	transition: color 0.15s, background-color 0.15s;
 }
 
-.scene_clip {
+.scene_clip, .missing_clip {
 	height: 40px;
+}
 
-  .scene_clip_label {
-    display: flex;
-    position: relative;
-    z-index: 10;
-    gap: 6px;
+.clip_label {
+  display: flex;
+  position: relative;
+  z-index: 10;
+  gap: 6px;
+  overflow: hidden;
+  max-width: 100%;
+  mask-image: linear-gradient(to right, black 0px, black calc(100% - 32px), transparent calc(100%));
+
+  svg {
+    width: 16px;
+    color: #fff5;
+    flex-shrink: 0;
+  }
+
+  .name {
+    flex-grow: 1;
     overflow: hidden;
-    max-width: 100%;
-    mask-image: linear-gradient(to right, black 0px, black calc(100% - 32px), transparent calc(100%));
+    width: 1000px;
+    margin: 0;
+    white-space: nowrap;
 
-    svg {
-      width: 16px;
-      color: #fff5;
-      flex-shrink: 0;
-    }
+    .source {
+      cursor: pointer;
+      position: relative;
+      height: 100%;
 
-    .name {
-      flex-grow: 1;
-      overflow: hidden;
-      width: 1000px;
-			margin: 0;
-
-			.source {
-				cursor: pointer;
-				position: relative;
-				height: 100%;
-
-				&:hover {
-					text-decoration: underline;
-				}
-			}
-
+      &:hover {
+        text-decoration: underline;
+      }
     }
   }
 }
 
-.audio_clip {
 
+.audio_clip {
   .clip_handle::before {
     color: color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
   }

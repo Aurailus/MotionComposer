@@ -4,10 +4,7 @@ import { MediaTabConfig } from './media/MediaTabConfig';
 import { OverlayConfig } from './overlay/OverlayConfig';
 import StateManager from './StateManager';
 
-// const videos = import.meta.glob('/clips/*.mkv');
-
-// console.log(videos);
-
+import VideoClipScene from './scenes/VideoClipScene?scene';
 import MissingClipScene from './scenes/MissingClipScene?scene';
 import EmptyTimelineScene from './scenes/EmptyTimelineScene?scene';
 
@@ -19,6 +16,7 @@ export default makeEditorPlugin({
 	project(project) {
 		project.scenes.push(EmptyTimelineScene);
 		project.scenes.push(MissingClipScene);
+		project.scenes.push(VideoClipScene);
 		return project;
 	}
 })

@@ -1,9 +1,10 @@
 import { createContext } from 'preact';
-import { useContext, useState, useEffect } from 'preact/hooks';
 import { Signal } from '@preact/signals';
+import { Vector2 } from '@motion-canvas/core';
+import { useContext, useState, useEffect } from 'preact/hooks';
 
-import { Clip, ClipSource } from './Types';
 import { Signalish } from './Signalish';
+import { Clip, ClipSource } from './Types';
 
 export const ClipsContext = createContext<{ clips: Signalish<readonly Clip[][]> }>({} as any);
 
@@ -25,7 +26,8 @@ export interface UIContextData {
 
 	updateMediaTabOpen: (open: boolean) => void;
 
-	dragging: Signal<ClipSource>;
+	addSource: Signal<ClipSource>;
+	addSourceDragPos: Signal<Vector2>;
 }
 
 export const UIContext = createContext<UIContextData>({} as any);

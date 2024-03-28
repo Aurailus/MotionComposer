@@ -28,9 +28,10 @@ interface ClipProps extends ClipChildProps {
 }
 
 export default function Clip({ clip, ...props }: ClipProps) {
-	const { dragging } = useUIContext();
+	const { addSource: dragging } = useUIContext();
   const { player, meta } = useApplication();
   const { framesToPixels, pixelsToFrames, offset } = useContext(TimelineContext);
+	const { addSource } = useUIContext();
 
 	const moveSide = useRef<'left' | 'right'>('left');
 	const moveOffset = useRef(0);
@@ -89,13 +90,16 @@ export default function Clip({ clip, ...props }: ClipProps) {
 	const width = framesToPixels(clip.cache.clipRange[1] - clip.cache.clipRange[0]);
 
 	const croppedLeft = clip.start > 0;
-	const croppedRight = clip.cache.lengthFrames < clip.cache.sourceFrames - clip.cache.startFrames;
+	const croppedRight = clip.cache.sourceFrames
+		? clip.cache.lengthFrames < clip.cache.sourceFrames - clip.cache.startFrames
+		: false;
 
   return (
     <div
       class={clsx(styles.clip, props.class,
 				croppedLeft && styles.cropped_left,
-				croppedRight && styles.cropped_right
+				croppedRight && styles.cropped_right,
+				addSource.value && styles.add_source,
 			)}
       style={{ width: `${width}px`, left: `${framesToPixels(clip.cache.clipRange[0])}px` }}
     >
@@ -129,14 +133,15 @@ export default function Clip({ clip, ...props }: ClipProps) {
 				{props.attachedChildren}
 			</div>
 
-			<div class={clsx(styles.drop_targets)}>
+			{addSource.value && <div class={clsx(styles.drop_targets)}>
 				<div class={clsx(styles.drop_target, styles.left)}
+				onDragOver={() => console.warn('dragOver')}
 					onMouseOver={dragging && (() => props.onDragClip('left'))}/>
 				<div class={clsx(styles.drop_target, styles.replace)}
 					onMouseOver={dragging && (() => props.onDragClip('replace'))}/>
 				<div class={clsx(styles.drop_target, styles.right)}
 					onMouseOver={dragging && (() => props.onDragClip('right'))}/>
-			</div>
+			</div>}
     </div>
   );
 }

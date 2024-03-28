@@ -5,11 +5,14 @@ import { findAndOpenFirstUserFile, useApplication, usePlayerState, useSubscribab
 import styles from './Clip.module.scss';
 
 import * as Icon from '../../icon';
+import { ensure } from '../../Util';
 import EventLabel from './EventLabel';
 import Clip, { ClipChildProps } from './Clip';
 
 export default function SceneClip({ clip, ...props }: ClipChildProps) {
-	const scene = clip.cache.scene;
+	const scene = clip.cache.source?.scene;
+	ensure(scene, 'SceneClip without scene.');
+
 	const { player } = useApplication();
   const events = useSubscribableValue(scene.timeEvents.onChanged);
 
@@ -32,7 +35,7 @@ export default function SceneClip({ clip, ...props }: ClipChildProps) {
 			}
 
 			labelChildren={
-				<div class={styles.scene_clip_label}>
+				<div class={styles.clip_label}>
 					<Icon.Scene/>
 					<p className={styles.name}>
 						<span

@@ -4,7 +4,7 @@
     "background": null,
     "range": [
       0,
-      null
+      5.933332333333333
     ],
     "size": {
       "x": 1920,
@@ -55,24 +55,33 @@
           "type": "scene",
           "path": "Circle",
           "offset": 3.6666666666666665,
-          "start": 0.7333333333333333,
-          "length": 1.7,
+          "start": 0,
+          "length": 2.433333333333333,
+          "volume": 1
+        },
+        {
+          "uuid": 5,
+          "type": "video",
+          "path": "cobalt.mkv",
+          "offset": 6.1,
+          "start": 0,
+          "length": 27.7,
           "volume": 1
         },
         {
           "uuid": 3,
           "type": "scene",
           "path": "Rectangle",
-          "offset": 5.366666666666666,
+          "offset": 33.8,
           "start": 0,
-          "length": 0.5,
+          "length": 3.033333333333333,
           "volume": 1
         },
         {
           "uuid": 4,
           "type": "scene",
           "path": "Square",
-          "offset": 5.866666666666666,
+          "offset": 36.833333333333336,
           "start": 0,
           "length": 2,
           "volume": 1

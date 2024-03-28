@@ -76,7 +76,7 @@ export default function EventLabel({ clip, event }: Props) {
     if (moved) {
       const newFrame = Math.max(0, eventTime);
       setEventTime(newFrame);
-      if (event.offset !== newFrame) clip.cache.scene.timeEvents.set(event.name, newFrame, e.shiftKey);
+      if (event.offset !== newFrame) clip.cache.source.scene!.timeEvents.set(event.name, newFrame, e.shiftKey);
     }
 
     // Else, seek to it.

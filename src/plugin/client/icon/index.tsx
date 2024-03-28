@@ -6,3 +6,4 @@ export { default as ViewLg } from './ViewLgIcon';
 export { default as ViewMd } from './ViewMdIcon';
 export { default as ViewSm } from './ViewSmIcon';
 export { default as ViewList } from './ViewListIcon';
+export { default as Missing } from './MissingIcon';

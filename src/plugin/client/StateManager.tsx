@@ -2,15 +2,16 @@
 
 import { ComponentChildren } from 'preact';
 import { useSignal } from '@preact/signals';
-import { ProjectMetadata, Scene } from '@motion-canvas/core';
+import { ProjectMetadata, Scene, Vector2 } from '@motion-canvas/core';
 import { useApplication, useScenes, } from '@motion-canvas/ui';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'preact/hooks';
 
 import { ensure } from './Util';
 import { useSignalish } from './Signalish';
-import { Clip, ClipSource, PluginSettings } from './Types';
+import { Clip, ClipSource, PluginSettings, copyClip } from './Types';
 import { getUUIDNext, setUUIDNext, useStore } from './Hooks';
 import { ClipsContext, CurrentClipContext, UIContext } from './Contexts';
+import { getSources, updateSceneSources, useSources } from './Sources';
 
 function metaPluginSettings(meta: ProjectMetadata) {
 	return {
@@ -27,6 +28,9 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const [ mediaTabVisible, setMediaTabVisible ] = useState(false);
 
   const scenes = useScenes();
+	useEffect(() => updateSceneSources(scenes), [ scenes ]);
+	const sources = useSources();
+
 	const { project, player } = useApplication();
 	const settings = useMemo(() => {
 		const settings = metaPluginSettings(project.meta)
@@ -39,7 +43,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 	const clip = useSignal<Clip | null>(null);
 
-	const dragging = useSignal<ClipSource | null>(null);
+	const addSource = useSignal<ClipSource | null>(null);
+	const addSourceDragPos = useSignal<Vector2>(new Vector2());
 
 	/**
 	 * Refresh cached clip data, including frame ranges and scene subscriptions.
@@ -52,27 +57,27 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 		let endTime = 0;
 		const hangingScenes = new Set<Scene>([ ...sceneSubscriptions.current.keys() ]);
+		const sources = getSources();
 
 		clips().forEach((layer) => {
 			let lastEndFrames = -1;
 
-			layer.forEach((clip) => {
-				let scene = clip.type === 'scene' && scenes.find(s => s.name === clip.path) || undefined;
-				ensure(scene, 'Scene is missing, or tried to cache a non-scene clip.');
+			for (let clip of layer) {
+				let source = sources.find(s => s.name === clip.path && s.type === clip.type);
 
-				const sourceFrames = scene.lastFrame - scene.firstFrame;
-				const offsetFrames = scene.playback.secondsToFrames(clip.offset);
-				const startFrames = scene.playback.secondsToFrames(clip.start);
-				const lengthFrames = scene.playback.secondsToFrames(clip.length);
+				const sourceFrames = source ? player.status.secondsToFrames(source.duration) : undefined;
+				const offsetFrames = player.status.secondsToFrames(clip.offset);
+				const startFrames = player.status.secondsToFrames(clip.start);
+				const lengthFrames = player.status.secondsToFrames(clip.length);
 
 				ensure(offsetFrames >= lastEndFrames, 'Clips must not overlap.');
 				lastEndFrames = offsetFrames + lengthFrames;
 
 				const clipRange = [ offsetFrames, offsetFrames + lengthFrames ] as [ number, number ];
 
-				ensure(startFrames >= 0 && startFrames < sourceFrames,
+				ensure(!sourceFrames || (startFrames >= 0 && startFrames < sourceFrames),
 					'Clip start out of bounds.');
-				ensure(lengthFrames > 0 && startFrames + lengthFrames <= sourceFrames,
+				ensure(!sourceFrames || (lengthFrames > 0 && startFrames + lengthFrames <= sourceFrames),
 					'Clips length out of bounds.')
 				ensure(clipRange[0] >= 0 && clipRange[1] > clipRange[0],
 					'Clip must not end before it begins.');
@@ -82,13 +87,13 @@ export default function StateManager({ children }: { children: ComponentChildren
 					lengthFrames,
 					startFrames,
 					sourceFrames,
-					scene
+					source
 				};
 
-				if (hangingScenes.has(scene)) hangingScenes.delete(scene);
+				if (source?.scene && hangingScenes.has(source.scene)) hangingScenes.delete(source.scene);
 
-				if (!sceneSubscriptions.current.has(scene)) {
-					sceneSubscriptions.current.set(scene, scene.onRecalculated.subscribe(() => {
+				if (source?.scene && !sceneSubscriptions.current.has(source.scene)) {
+					sceneSubscriptions.current.set(source.scene, source.scene.onRecalculated.subscribe(() => {
 						cacheClipData();
 					}));
 				}
@@ -99,7 +104,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 				});
 
 				endTime = Math.max(endTime, clip.offset + clip.length);
-			});
+			}
 		});
 
 		if (!immediate) clips([ ...clips() ]);
@@ -115,6 +120,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 	}, []));
 
 	useLayoutEffect(() => {
+		const MISSING_CLIP_SCENE = scenes.find(s => s.name === 'MissingClipScene') ?? null;
 		const EMPTY_TIMELINE_SCENE = scenes.find(s => s.name === 'EmptyTimelineScene') ?? null;
 		const EMPTY_TIMELINE_CLIP: Clip = {
 			type: 'scene',
@@ -123,7 +129,15 @@ export default function StateManager({ children }: { children: ComponentChildren
 			offset: 0,
 			start: 0,
 			volume: 0,
-			uuid: -1
+			uuid: -1,
+			cache: {} as any
+		};
+		const EMPTY_TIMELINE_SOURCE: ClipSource = {
+			type: 'scene',
+			path: 'EmptyTimelineScene',
+			name: 'Empty Timeline Scene',
+			duration: 1,
+			scene: EMPTY_TIMELINE_SCENE,
 		};
 
 		clip.value = clipsStore()?.[0]?.[0] ?? null;
@@ -158,7 +172,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 				lengthFrames: clipRange[1] - clipRange[0],
 				startFrames: 0,
 				sourceFrames: clipRange[1] - clipRange[0],
-				scene: EMPTY_TIMELINE_SCENE
+				source: EMPTY_TIMELINE_SOURCE
 			}
 			return clip.value
 		}
@@ -176,8 +190,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 		(player.playback as any).getNextScene = (function() {
 			getBestClip(clip.value?.cache.clipRange[1] ?? 0);
-			if (!clip.value) return null;
-			return clip.value.cache.scene;
+			if (!clip.value || !clip.value.cache?.source?.scene) return null;
+			return clip.value.cache.source?.scene ?? MISSING_CLIP_SCENE;
 		}).bind(player.playback);
 
 
@@ -185,7 +199,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 		(player.playback as any).findBestScene = (function(frame: number) {
 			getBestClip(frame);
-			return clip.value.cache.scene;
+			return clip.value.cache?.source?.scene ?? MISSING_CLIP_SCENE;
 		}).bind(player.playback);
 
 		/** Override PlaybackManager.next() to detect clip endings and request the next scene properly. */
@@ -291,6 +305,9 @@ export default function StateManager({ children }: { children: ComponentChildren
 		player.playback.recalculate();
 	}, [ clipsStore() ]);
 
+	useEffect(() => {
+		if (clips().length > 0) cacheClipData();
+	}, [ sources ]);
 
 	useEffect(() => {
 		let cancel: () => void;
@@ -305,7 +322,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 	const uiContextData = useMemo(() => ({
 		mediaTabOpen: mediaTabVisible,
 		updateMediaTabOpen: setMediaTabVisible,
-		dragging
+		addSource,
+		addSourceDragPos
 	}), [ mediaTabVisible ]);
 
 	const clipsContextData = useMemo(() => ({ clips }), [ clips() ]);

@@ -14,6 +14,7 @@ import { Clip, copyClip } from '../Types';
 import { RangeSelector } from './RangeSelector';
 import { MissingClip, SceneClip } from './clip/Clip';
 import { TimelineContext, TimelineContextData } from './TimelineContext';
+import VideoClip from './clip/VideoClip';
 
 const NUM_SNAP_FRAMES = 3;
 
@@ -437,24 +438,37 @@ export default function Timeline() {
 							<div className={styles.clips_track}
 								style={{ width: framesToPixels(player.status.secondsToFrames(range[1])) }}>
 								{(modifiedClips()[0] ?? []).map(clip => {
-									switch (clip.type) {
-										case 'scene': {
-											const scene = scenes.find(s => s.name === clip.path);
-											if (!scene) break;
-											return (
-												<SceneClip
-													key={clip.uuid}
-													clip={clip}
+									if (clip.cache.source) {
+										switch (clip.type) {
+											case 'scene': {
+												return (
+													<SceneClip
+														key={clip.uuid}
+														clip={clip}
 
-													onResize={(side, diff) => handleClipResize(clip, side, diff)}
-													onMove={(diff) => handleClipMove(clip, diff)}
-													onCommit={handleClipCommit}
-													onDragClip={(side) => handleDragClip(clip, side)}
-												/>
-											);
-										}
-										default: {
-											break;
+														onResize={(side, diff) => handleClipResize(clip, side, diff)}
+														onMove={(diff) => handleClipMove(clip, diff)}
+														onCommit={handleClipCommit}
+														onDragClip={(side) => handleDragClip(clip, side)}
+													/>
+												);
+											}
+											case 'video': {
+												return (
+													<VideoClip
+														key={clip.uuid}
+														clip={clip}
+
+														onResize={(side, diff) => handleClipResize(clip, side, diff)}
+														onMove={(diff) => handleClipMove(clip, diff)}
+														onCommit={handleClipCommit}
+														onDragClip={(side) => handleDragClip(clip, side)}
+													/>
+												)
+											}
+											default: {
+												break;
+											}
 										}
 									}
 									return <MissingClip

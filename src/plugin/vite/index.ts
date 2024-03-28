@@ -87,20 +87,22 @@ export default function Plugin() {
 	return {
 		name: 'motion-composer-media-importer',
 		transform: async (_: string, id: string) => {
-			const ext = id.slice(id.lastIndexOf('.') + 1);
+			if (!id.endsWith('?meta')) return;
+			const ext = id.slice(id.lastIndexOf('.') + 1, id.lastIndexOf('?'));
+			const path = id.slice(0, id.lastIndexOf('?meta'));
 
 			if (FileTypes.Audio.indexOf(ext) !== -1) {
-				const data = await audio(id);
+				const data = await audio(path);
 				return `export default JSON.parse(\`${JSON.stringify(data)}\`)`;
 			}
 
 			if (FileTypes.Video.indexOf(ext) !== -1) {
-				const data = await video(id);
+				const data = await video(path);
 				return `export default JSON.parse(\`${JSON.stringify(data)}\`)`;
 			}
 
 			if (FileTypes.Image.indexOf(ext) !== -1) {
-				const data = await image(id);
+				const data = await image(path);
 				return `export default JSON.parse(\`${JSON.stringify(data)}\`)`;
 			}
 		}
