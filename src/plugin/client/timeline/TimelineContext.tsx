@@ -1,4 +1,6 @@
+import { Signal } from '@preact/signals';
 import { createContext } from 'preact';
+import { EditorMode, EditorTool } from '../Types';
 
 /**
  * Ripped from `@motion-canvas/ui/src/contexts/timeline.tsx`
@@ -45,17 +47,9 @@ export interface TimelineContextData {
    * Convert current pointer position to frames.
    */
   pointerToFrames: (value: number) => number;
+
+  tool: Signal<EditorTool>;
+  mode: Signal<EditorMode>;
 }
 
-export const TimelineContext = createContext<TimelineContextData>({
-  viewLength: 0,
-  offset: 0,
-  density: 1,
-  segmentDensity: 1,
-  lastVisibleFrame: 0,
-  firstVisibleFrame: 0,
-  framesToPercents: value => value,
-  framesToPixels: value => value,
-  pixelsToFrames: value => value,
-  pointerToFrames: value => value,
-});
+export const TimelineContext = createContext<TimelineContextData>({} as any);

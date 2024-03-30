@@ -22,7 +22,7 @@ A (heavily WIP) plugin to add more video editing features to [Motion Canvas](htt
   - [x] Fix play bar position and frame counts.
   - [x] Check if modifying a scene fucks things up.
   - [x] Make sure having no scene works.
-- [ ] Dummy scenes to display video and images.
+- [x] Dummy scenes to display video and images.
 - [ ] FFMPEG exporter.
 
 ## Stretch Goals

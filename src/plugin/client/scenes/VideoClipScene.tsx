@@ -1,15 +1,25 @@
 import { Video, makeScene2D} from '@motion-canvas/2d';
-import { waitFor } from '@motion-canvas/core';
+import { createRef, waitFor } from '@motion-canvas/core';
 
-let videoSource = '';
-let videoDuration = 0;
+const STATE = {
+	source: '',
+	sourceDuration: 0,
+	playDuration: 0
+}
 
-export function setVideo(src: string, duration: number) {
-	videoSource = src;
-	videoDuration = duration;
+export function setVideo(source: string, sourceDuration: number, playDuration: number) {
+	STATE.source = source;
+	STATE.sourceDuration = sourceDuration;
+	STATE.playDuration = playDuration;
 }
 
 export default makeScene2D(function* (view) {
-  view.add(<Video size='100%' src={videoSource} play/>);
-	yield* waitFor(videoDuration);
+	if (!STATE.source) return;
+
+  const videoRef = createRef<Video>();
+	yield view.add(<Video ref={videoRef} size='100%' src={STATE.source}/>);
+	videoRef().play();
+	yield* waitFor(STATE.playDuration);
+	videoRef().pause();
+	yield* waitFor(STATE.sourceDuration - STATE.playDuration);
 });

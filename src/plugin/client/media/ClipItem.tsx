@@ -63,7 +63,11 @@ export default function ClipItem(props: ClipItemProps) {
 				: props.thumbnail}
 			<Icon class={styles.icon}/>
 			<p class={styles.name} title={props.name}>{props.name}</p>
-			<p class={styles.duration}>{formatDuration(props.duration)}</p>
+			<p class={styles.duration}>
+				{props.duration === Infinity
+					? '--:--:--'
+					: formatDuration(props.duration)}
+			</p>
 		</div>
 	);
 }

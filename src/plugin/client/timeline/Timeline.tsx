@@ -12,9 +12,9 @@ import { useClips } from '../Contexts';
 import { Timestamps } from './Timestamps';
 import { Clip, copyClip } from '../Types';
 import { RangeSelector } from './RangeSelector';
-import { MissingClip, SceneClip } from './clip/Clip';
 import { TimelineContext, TimelineContextData } from './TimelineContext';
-import VideoClip from './clip/VideoClip';
+import { ImageClip, MissingClip, SceneClip, VideoClip } from './clip/Clip';
+import Toolbar from './Toolbar';
 
 const NUM_SNAP_FRAMES = 3;
 
@@ -38,7 +38,6 @@ export default function Timeline() {
 	const { fps } = usePreviewSettings();
 	const time = usePlayerTime();
   const scenes = useScenes();
-  const { framesToPixels } = useContext(TimelineContext);
   const clips = useClips();
 
 	const shiftHeld = useKeyHold('Shift');
@@ -407,11 +406,13 @@ export default function Timeline() {
 	return (
 		<TimelineContext.Provider value={state}>
 			<div class={styles.timeline}>
+				<Toolbar/>
+
 				<div class={styles.timeline_labels}>
 					<div class={styles.timeline_label}><label>Clips</label></div>
-					<div class={styles.timeline_label}><label>Audio 1</label></div>
+					{/* <div class={styles.timeline_label}><label>Audio 1</label></div>
 					<div class={styles.timeline_label}><label>Audio 2</label></div>
-					<div class={styles.timeline_label}><label>Audio 3</label></div>
+					<div class={styles.timeline_label}><label>Audio 3</label></div> */}
 				</div>
 				<div
 					ref={wrapperRef}
@@ -436,7 +437,7 @@ export default function Timeline() {
 							<Timestamps/>
 							<Playhead seeking={seeking}/>
 							<div className={styles.clips_track}
-								style={{ width: framesToPixels(player.status.secondsToFrames(range[1])) }}>
+								style={{ width: conversion.framesToPixels(player.status.secondsToFrames(range[1])) }}>
 								{(modifiedClips()[0] ?? []).map(clip => {
 									if (clip.cache.source) {
 										switch (clip.type) {
@@ -456,6 +457,19 @@ export default function Timeline() {
 											case 'video': {
 												return (
 													<VideoClip
+														key={clip.uuid}
+														clip={clip}
+
+														onResize={(side, diff) => handleClipResize(clip, side, diff)}
+														onMove={(diff) => handleClipMove(clip, diff)}
+														onCommit={handleClipCommit}
+														onDragClip={(side) => handleDragClip(clip, side)}
+													/>
+												)
+											}
+											case 'image': {
+												return (
+													<ImageClip
 														key={clip.uuid}
 														clip={clip}
 

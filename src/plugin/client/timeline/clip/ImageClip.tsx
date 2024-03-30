@@ -5,15 +5,15 @@ import styles from './Clip.module.scss';
 import * as Icon from '../../icon';
 import Clip, { ClipChildProps } from './Clip';
 
-export default function VideoClip({ clip, ...props }: ClipChildProps) {
+export default function ImageClip({ clip, ...props }: ClipChildProps) {
 	return (
     <Clip
 			{...props}
 	 		clip={clip}
-			class={styles.video_clip}
+			class={styles.image_clip}
 			labelChildren={
 				<div class={styles.clip_label}>
-					<Icon.Video/>
+					<Icon.Image/>
 					<p className={styles.name}>
 						<span
 							className={styles.source}

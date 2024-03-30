@@ -237,4 +237,6 @@ export default function Clip({ clip, ...props }: ClipProps) {
 // }
 
 export { default as SceneClip } from './SceneClip';
+export { default as ImageClip } from './ImageClip';
+export { default as VideoClip } from './VideoClip';
 export { default as MissingClip } from './MissingClip';

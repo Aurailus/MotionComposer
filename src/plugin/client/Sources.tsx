@@ -10,6 +10,7 @@ const IMAGE_FILES = import.meta.glob(`/media/*.(png|jpg|jpeg|webp)`, { query: '?
 let sources = signal<ClipSource[]>([]);
 
 function replaceSourcesOfType(type: string, insert: ClipSource[]) {
+	if (type === 'image') insert.forEach(s => s.duration = Infinity);
 	const existingOfType = sources.peek().filter(s => s.type === type).sort((a, b) => a.path.localeCompare(b.path));
 	const sortedInsert = [ ...insert ].sort((a, b) => a.path.localeCompare(b.path));
 
@@ -36,7 +37,7 @@ function replaceSourcesOfType(type: string, insert: ClipSource[]) {
 	];
 }
 
-const INTERNAL_SCENES = [ 'EmptyTimelineScene', 'MissingClipScene', 'VideoClipScene' ];
+const INTERNAL_SCENES = [ 'EmptyTimelineScene', 'MissingClipScene', 'VideoClipScene', 'ImageClipScene' ];
 
 Promise.all(Object.values(AUDIO_FILES).map(async (f) =>
 	(await f() as any).default)).then(sources => replaceSourcesOfType('audio', sources));
@@ -49,6 +50,7 @@ Promise.all(Object.values(IMAGE_FILES).map(async (f) =>
 
 export function updateSceneSources(scenes: Scene[]) {
 	console.warn('UPDATE SCENE SOURCES');
+
 	replaceSourcesOfType('scene', scenes.filter(({ name }) => !INTERNAL_SCENES.includes(name)).map(scene => ({
 		type: 'scene',
 		path: scene.name,

@@ -1,9 +1,16 @@
 .timeline {
 	background-color: var(--background-color);
 	overflow: hidden;
+  position: relative;
 	display: grid;
-	grid-template-columns: 120px 1fr;
+  height: 100%;
+	grid-template-columns: auto 120px 1fr;
+
+  > * {
+    max-height: 100%;
+  }
 }
+
 
 .timeline_labels {
 	display: grid;
@@ -34,12 +41,6 @@
 
   &::-webkit-scrollbar { background-color: var(--background-color); }
   &::-webkit-scrollbar-thumb { border-color: var(--background-color); }
-}
-
-.timeline {
-  position: relative;
-  overflow: hidden;
-  height: 100%;
 }
 
 .timeline_content {
@@ -187,3 +188,45 @@
   }
 }
 
+.toolbar {
+  --input-background: var(--surface-color);
+  background-color: var(--surface-color-dark);
+  border-right: 2px solid var(--background-color-dark);
+  display: flex;
+  max-height: 100%;
+  padding: 8px 8px;
+  flex-direction: column;
+  justify-content: space-between;
+
+  .button_group {
+    display: flex;
+    flex-direction: column;
+
+    button {
+      padding: 0;
+      width: 28px;
+      height: unset;
+      color: #aaa;
+      aspect-ratio: 1;
+      border-radius: 0;
+      box-sizing: content-box;
+      box-shadow: none !important;
+
+      &[class*="main"] {
+        background-color: var(--theme-overlay) !important;
+        color: var(--theme);
+      }
+
+      // &:hover {
+      //   filter: brightness(1.2);
+      // }
+      // flex-shrink: 0;
+      // background-color: var(--input-background);
+
+      &:not(:last-child) { border-bottom: 1px solid var(--background-color); }
+
+      &:first-child { border-radius: 4px 4px 0 0; }
+      &:last-child { border-radius: 0 0 4px 4px; }
+    }
+  }
+}

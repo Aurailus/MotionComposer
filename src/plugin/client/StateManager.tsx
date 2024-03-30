@@ -12,6 +12,8 @@ import { Clip, ClipSource, PluginSettings, copyClip } from './Types';
 import { getUUIDNext, setUUIDNext, useStore } from './Hooks';
 import { ClipsContext, CurrentClipContext, UIContext } from './Contexts';
 import { getSources, updateSceneSources, useSources } from './Sources';
+import { setVideo } from './scenes/VideoClipScene';
+import { setImage } from './scenes/ImageClipScene';
 
 function metaPluginSettings(meta: ProjectMetadata) {
 	return {
@@ -65,7 +67,9 @@ export default function StateManager({ children }: { children: ComponentChildren
 			for (let clip of layer) {
 				let source = sources.find(s => s.name === clip.path && s.type === clip.type);
 
-				const sourceFrames = source ? player.status.secondsToFrames(source.duration) : undefined;
+				const sourceFrames = source
+					? player.status.secondsToFrames(source.duration)
+					: undefined;
 				const offsetFrames = player.status.secondsToFrames(clip.offset);
 				const startFrames = player.status.secondsToFrames(clip.start);
 				const lengthFrames = player.status.secondsToFrames(clip.length);
@@ -120,8 +124,14 @@ export default function StateManager({ children }: { children: ComponentChildren
 	}, []));
 
 	useLayoutEffect(() => {
-		const MISSING_CLIP_SCENE = scenes.find(s => s.name === 'MissingClipScene') ?? null;
-		const EMPTY_TIMELINE_SCENE = scenes.find(s => s.name === 'EmptyTimelineScene') ?? null;
+		const MISSING_CLIP_SCENE = scenes.find(s => s.name === 'MissingClipScene');
+		const EMPTY_TIMELINE_SCENE = scenes.find(s => s.name === 'EmptyTimelineScene');
+		const VIDEO_CLIP_SCENE = scenes.find(s => s.name === 'VideoClipScene');
+		const IMAGE_CLIP_SCENE = scenes.find(s => s.name === 'ImageClipScene');
+
+		ensure(MISSING_CLIP_SCENE && EMPTY_TIMELINE_SCENE && VIDEO_CLIP_SCENE && IMAGE_CLIP_SCENE,
+			'Internal MotionComposer scenes not found. Some other plugin is messing with the scene list!');
+
 		const EMPTY_TIMELINE_CLIP: Clip = {
 			type: 'scene',
 			path: 'EmptyTimelineScene',
@@ -149,13 +159,14 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 			let prev: Clip | null = null;
 			let next: Clip | null = null;
+			let found: Clip | null = null;
 
 			for (let candidate of clips) {
 				ensure(candidate.cache, 'Uncached clip found!');
 				if (candidate.cache.clipRange[1] < frame) prev = candidate;
 				if (frame >= candidate.cache.clipRange[0] && frame < candidate.cache.clipRange[1]) {
-					clip.value = candidate;
-					return clip.value;
+					found = candidate;
+					break;
 				}
 				else if (frame < candidate.cache.clipRange[0]) {
 					next = candidate;
@@ -163,18 +174,35 @@ export default function StateManager({ children }: { children: ComponentChildren
 				}
 			}
 
-			clip.value = EMPTY_TIMELINE_CLIP;
-			const clipRange: [ number, number ] = [
-				prev ? prev.cache.clipRange[1] : 0,
-				next ? next.cache.clipRange[0] : (player as any).endFrame ];
-			clip.value.cache = {
-				clipRange,
-				lengthFrames: clipRange[1] - clipRange[0],
-				startFrames: 0,
-				sourceFrames: clipRange[1] - clipRange[0],
-				source: EMPTY_TIMELINE_SOURCE
+			if (found) {
+				if (found.cache.source?.type === 'video') {
+					setVideo(`/media/${found.cache.source.name!}`, found.cache.source.duration, found.length + found.start);
+					found.cache.source.scene = VIDEO_CLIP_SCENE;
+				}
+				else if (found.cache.source?.type === 'image') {
+					setImage(`/media/${found.cache.source.name!}`, found.length + found.start);
+					found.cache.source.scene = IMAGE_CLIP_SCENE;
+					// found.cache.source.duration = Infinity;
+					// found.cache.sourceFrames = Infinity;
+				}
+
+				clip.value = found;
+				return clip.value;
 			}
-			return clip.value
+			else {
+				clip.value = EMPTY_TIMELINE_CLIP;
+				const clipRange: [ number, number ] = [
+					prev ? prev.cache.clipRange[1] : 0,
+					next ? next.cache.clipRange[0] : (player as any).endFrame ];
+				clip.value.cache = {
+					clipRange,
+					lengthFrames: clipRange[1] - clipRange[0],
+					startFrames: 0,
+					sourceFrames: clipRange[1] - clipRange[0],
+					source: EMPTY_TIMELINE_SOURCE
+				}
+				return clip.value
+			}
 		}
 
 		/** Helper method used by overridden PlaybackManager.seek() and PlaybackManager.next() to advance scene frames. */
@@ -190,7 +218,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 		(player.playback as any).getNextScene = (function() {
 			getBestClip(clip.value?.cache.clipRange[1] ?? 0);
-			if (!clip.value || !clip.value.cache?.source?.scene) return null;
+			if (!clip.value) return null;
 			return clip.value.cache.source?.scene ?? MISSING_CLIP_SCENE;
 		}).bind(player.playback);
 
@@ -220,7 +248,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 			}
 
 			// Compute the next frame in the scene.
-			if (this.currentScene !== EMPTY_TIMELINE_SCENE) await this.currentScene.next();
+			if (this.currentScene !== EMPTY_TIMELINE_SCENE &&
+				this.currentScene !== MISSING_CLIP_SCENE) await this.currentScene.next();
 
 			// If the current scene is done transitioning, clear the previous scene.
 			if (this.previousScene && this.currentScene.isAfterTransitionIn()) this.previousScene = null;

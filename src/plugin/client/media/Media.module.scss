@@ -118,7 +118,7 @@
 	&.sm {
 		grid-template-columns: repeat(auto-fill, 86px);
 
-		.media_item {
+		.clip_item {
 			.icon {
 				position: absolute;
 				top: -63px;
@@ -149,7 +149,7 @@
 	&.list {
 		gap: 2px;
 
-		.media_item {
+		.clip_item {
 			background: transparent;
 			box-shadow: none;
 			overflow: visible;

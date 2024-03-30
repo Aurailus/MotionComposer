@@ -92,10 +92,13 @@ export interface Clip {
 	cache: ClipInfo;
 }
 
+export type EditorTool = 'select' | 'cut' | 'shift';
+export type EditorMode = 'compose' | 'clip';
+
 export function copyClip(clip: Clip): Clip {
 	const cacheSafe = { ...clip.cache };
 	delete cacheSafe.source;
-	const newClip = JSON.parse(JSON.stringify({ ...clip, cache: cacheSafe }));
+	const newClip = structuredClone({ ...clip, cache: cacheSafe });
 	newClip.cache.source = clip.cache.source;
 	return newClip;
 }
