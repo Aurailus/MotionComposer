@@ -1,6 +1,7 @@
 import { Signal } from '@preact/signals';
 import { createContext } from 'preact';
 import { EditorMode, EditorTool } from '../Types';
+import { StateUpdater } from 'preact/hooks';
 
 /**
  * Ripped from `@motion-canvas/ui/src/contexts/timeline.tsx`
@@ -48,8 +49,14 @@ export interface TimelineContextData {
    */
   pointerToFrames: (value: number) => number;
 
-  tool: Signal<EditorTool>;
-  mode: Signal<EditorMode>;
+  tool: EditorTool;
+  setTool: (tool: EditorTool) => void;
+
+  mode: EditorMode;
+  setMode: (mode: EditorMode) => void;
+
+  snap: boolean;
+  setSnap: (snap: boolean) => void;
 }
 
 export const TimelineContext = createContext<TimelineContextData>({} as any);

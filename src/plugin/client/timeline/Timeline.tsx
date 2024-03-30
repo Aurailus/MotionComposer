@@ -1,20 +1,22 @@
 /* @jsxImportSource preact */
 
 import { useSignal } from '@preact/signals';
-import { useLayoutEffect, useMemo, useRef, useContext } from 'preact/hooks';
+import { useLayoutEffect, useMemo, useRef, useContext, useEffect, useCallback } from 'preact/hooks';
 import { MouseButton, MouseMask, borderHighlight, clamp, labelClipDraggingLeftSignal, useApplication, useDuration, useKeyHold, usePlayerTime, usePreviewSettings, useScenes, useSharedSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 
-import { useStore } from '../Hooks';
+import Toolbar from './Toolbar';
 import { Playhead } from './Playhead';
 import { useClips } from '../Contexts';
 import { Timestamps } from './Timestamps';
-import { Clip, copyClip } from '../Types';
 import { RangeSelector } from './RangeSelector';
+import { useShortcut, useStore, useStoredState } from '../Hooks';
+import * as Shortcut from '../shortcut/ShortcutMappings';
+import useShortcutHover from '../shortcut/useShortcutHover';
+import { Clip, EditorMode, EditorTool, copyClip } from '../Types';
 import { TimelineContext, TimelineContextData } from './TimelineContext';
 import { ImageClip, MissingClip, SceneClip, VideoClip } from './clip/Clip';
-import Toolbar from './Toolbar';
 
 const NUM_SNAP_FRAMES = 3;
 
@@ -31,19 +33,20 @@ const TIMESTAMP_SPACING = 32;
 const ZOOM_START_THRESHOLD = 48;
 
 export default function Timeline() {
+	const [ shortcutRef ] = useShortcutHover<HTMLDivElement>('timeline');
+
 	const [ scale, setScale ] = useStorage('timeline-scale', 1);
 	const [ offset, setOffset ] = useStorage('timeline-offset', 0);
+	const { player, meta } = useApplication();
 	const { range } = useSharedSettings();
-	const { player } = useApplication();
 	const { fps } = usePreviewSettings();
-	const time = usePlayerTime();
+  const time = usePlayerTime();
   const scenes = useScenes();
   const clips = useClips();
 
 	const shiftHeld = useKeyHold('Shift');
 	const ctrlHeld = useKeyHold('Control');
 
-	const snap = !shiftHeld;
 	const overwrite = ctrlHeld;
 
 	const duration = useDuration();
@@ -52,6 +55,10 @@ export default function Timeline() {
 	const playheadRef = useRef<HTMLDivElement>();
 	const rect = useSize(wrapperRef);
 	const rangeRef = useRef<HTMLDivElement>();
+
+	const [ tool, setTool ] = useStoredState<EditorTool>('shift', 'editor-tool');
+	const [ mode, setMode ] = useStoredState<EditorMode>('compose', 'editor-mode');
+	const [ snap, setSnap ] = useStoredState<boolean>(true, 'editor-snap');
 
 	const modifiedClips = useStore<Clip[][]>(() => clips().map(arr => [ ...arr ]));
 	useLayoutEffect(() => void modifiedClips(clips().map(arr => [ ...arr ])), [ clips ]);
@@ -107,8 +114,14 @@ export default function Timeline() {
       pointerToFrames: (value: number) =>
         conversion.pixelsToFrames(value - startPosition),
       ...conversion,
+			tool,
+			setTool,
+			mode,
+			setMode,
+			snap,
+			setSnap
     };
-  }, [sizes, conversion, duration, offset]);
+  }, [ sizes, conversion, duration, offset, tool, mode, snap ]);
 
 	useStateChange(([prevDuration, prevWidth]) => {
       const newDuration = duration / fps;
@@ -125,6 +138,55 @@ export default function Timeline() {
     },
     [duration / fps, rect.width],
   );
+
+	/** Shortcuts. */
+
+	const releaseTool = useRef<EditorTool>(tool);
+
+	useShortcut(Shortcut.RazorTool, {
+		press: () => setTool(tool => (releaseTool.current = tool, 'cut')),
+		holdRelease: () => setTool(releaseTool.current)
+	}, []);
+
+	useShortcut(Shortcut.ShiftTool, {
+		press: () => setTool(tool => (releaseTool.current = tool, 'shift')),
+		holdRelease: () => setTool(releaseTool.current)
+	}, []);
+
+	useShortcut(Shortcut.SelectTool, {
+		press: () => setTool(tool => (releaseTool.current = tool, 'select')),
+		holdRelease: () => setTool(releaseTool.current)
+	}, []);
+
+	useShortcut(Shortcut.ToggleSnapping, {
+		press: () => setSnap(s => !s),
+		holdRelease: () => setSnap(s => !s)
+	}, []);
+
+	useShortcut(Shortcut.SwapTimelineMode, {
+		press: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose'),
+		holdRelease: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose')
+	}, []);
+
+	useShortcut(Shortcut.HoldTimelineMode, {
+		press: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose'),
+		release: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose')
+	}, []);
+
+  // const handleRangeToCursor = useCallback((side: 'left' | 'right') => {
+	// 	const newPos = state.pointerToFrames();
+  //   meta.shared.range.update(normalizedStart, normalizedEnd, duration, fps);
+  // }, [ range ]);
+
+  // useShortcut(Shortcut.RangeStartToCursor, {
+	// 	press: () => handleRangeToCursor('left'),
+	// 	elem: shortcutRef.current },
+	// [ shortcutRef.current, range ]);
+
+  // useShortcut(Shortcut.RangeEndToCursor, {
+	// 	press: () => handleRangeToCursor('right'),
+	// 	elem: shortcutRef.current },
+	// [ shortcutRef.current, range ]);
 
 	useLayoutEffect(() => {
     wrapperRef.current.scrollLeft = offset;
@@ -426,6 +488,7 @@ export default function Timeline() {
 					<div
 						class={styles.timeline}
 						style={{ width: `${sizes.fullLength}px` }}
+						ref={shortcutRef}
 					>
 						<div
 							class={styles.timeline_content}

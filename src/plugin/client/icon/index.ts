@@ -12,3 +12,4 @@ export { default as Select } from './SelectIcon';
 export { default as Hand } from './HandIcon';
 export { default as Composition } from './CompositionIcon';
 export { default as Clipper } from './ClipperIcon';
+export { default as Magnet } from './MagnetIcon';

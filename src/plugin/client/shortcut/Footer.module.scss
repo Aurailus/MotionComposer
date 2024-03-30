@@ -1,0 +1,29 @@
+.shortcuts {
+	flex-grow: 1;
+	display: flex;
+	overflow: hidden;
+	line-height: 16px;
+	font-size: var(--font-size-small);
+	background-color: var(--background-color);
+	padding: 5px;
+
+	.shortcut {
+		display: flex;
+
+		&:not(:last-child) {
+			border-right: 2px solid var(--surface-color);
+			padding-right: 8px;
+			margin-right: 8px;
+		}
+		.key {
+			background-color: var(--surface-color-hover);
+			font-weight: bold;
+			border-radius: var(--radius);
+			margin-right: 4px;
+			padding: 0 4px;
+		}
+		.action {
+			white-space: nowrap;
+		}
+	}
+}

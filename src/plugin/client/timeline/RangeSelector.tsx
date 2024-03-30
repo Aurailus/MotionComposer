@@ -10,6 +10,8 @@ import styles from './Timeline.module.scss';
 
 import { useClips } from '../Contexts';
 import { TimelineContext } from './TimelineContext';
+import { useShortcut } from '../Hooks';
+import { RangeEndToCursor, RangeStartToCursor } from '../shortcut/ShortcutMappings';
 
 export interface RangeSelectorProps {
   rangeRef: RefObject<HTMLDivElement>;
@@ -107,8 +109,6 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
 
     meta.shared.range.update(normalizedStart, normalizedEnd, duration, fps);
   }, [ start, end, duration, fps ]);
-
-
 
   let normalizedStart = Math.ceil(Math.max(Math.min(start, end), 0));
   let normalizedEnd = Math.ceil(Math.min(Math.max(start, end), duration)) + (end < start ? 1 : 0);

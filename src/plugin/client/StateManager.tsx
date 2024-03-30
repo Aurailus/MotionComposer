@@ -3,17 +3,18 @@
 import { ComponentChildren } from 'preact';
 import { useSignal } from '@preact/signals';
 import { ProjectMetadata, Scene, Vector2 } from '@motion-canvas/core';
-import { useApplication, useScenes, } from '@motion-canvas/ui';
+import { useApplication, useScenes } from '@motion-canvas/ui';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'preact/hooks';
 
-import { ensure } from './Util';
+import { addEventListener, ensure } from './Util';
 import { useSignalish } from './Signalish';
-import { Clip, ClipSource, PluginSettings, copyClip } from './Types';
+import { Clip, ClipSource, PluginSettings } from './Types';
 import { getUUIDNext, setUUIDNext, useStore } from './Hooks';
-import { ClipsContext, CurrentClipContext, UIContext } from './Contexts';
+import { ClipsContext, CurrentClipContext, UIContext, ShortcutsContext } from './Contexts';
 import { getSources, updateSceneSources, useSources } from './Sources';
 import { setVideo } from './scenes/VideoClipScene';
 import { setImage } from './scenes/ImageClipScene';
+import { ShortcutModule } from './shortcut/ShortcutMappings';
 
 function metaPluginSettings(meta: ProjectMetadata) {
 	return {
@@ -47,6 +48,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 	const addSource = useSignal<ClipSource | null>(null);
 	const addSourceDragPos = useSignal<Vector2>(new Vector2());
+
+	const shortcutModule = useState<ShortcutModule>('global');
 
 	/**
 	 * Refresh cached clip data, including frame ranges and scene subscriptions.
@@ -330,6 +333,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 		// }).bind(player.playback);
 	}, []);
 
+
 	useEffect(() => {
 		player.playback.recalculate();
 	}, [ clipsStore() ]);
@@ -337,6 +341,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 	useEffect(() => {
 		if (clips().length > 0) cacheClipData();
 	}, [ sources ]);
+
+	// Recompute clips when the duration changes, i.e. when the scenes load.
 
 	useEffect(() => {
 		let cancel: () => void;
@@ -348,6 +354,19 @@ export default function StateManager({ children }: { children: ComponentChildren
 		return cancel;
 	}, []);
 
+	// Display viewport shortcuts.
+
+	const viewport = document.querySelector('[class^="_viewport_"]');
+	useEffect(() => {
+		const toRemove: (() => void)[] = [];
+		if (!viewport) return;
+		toRemove.push(addEventListener(viewport, 'mouseenter', () => shortcutModule[1]('viewport')));
+		toRemove.push(addEventListener(viewport, 'mouseleave', () => shortcutModule[1]('global')));
+		return () => toRemove.forEach(fn => fn());
+	}, [ viewport ]);
+
+	// All the context values (so many).
+
 	const uiContextData = useMemo(() => ({
 		mediaTabOpen: mediaTabVisible,
 		updateMediaTabOpen: setMediaTabVisible,
@@ -356,13 +375,19 @@ export default function StateManager({ children }: { children: ComponentChildren
 	}), [ mediaTabVisible ]);
 
 	const clipsContextData = useMemo(() => ({ clips }), [ clips() ]);
+
 	const currentClipContextData = useMemo(() => ({ clip }), []);
+
+	const shortcutsContextData = useMemo(() => ({
+		currentModule: shortcutModule[0], setCurrentModule: shortcutModule[1] }), [ shortcutModule ]);
 
 	return (
 		<UIContext.Provider value={uiContextData}>
 			<ClipsContext.Provider value={clipsContextData}>
 				<CurrentClipContext.Provider value={currentClipContextData}>
-					{children}
+					<ShortcutsContext.Provider value={shortcutsContextData}>
+						{children}
+					</ShortcutsContext.Provider>
 				</CurrentClipContext.Provider>
 			</ClipsContext.Provider>
 		</UIContext.Provider>

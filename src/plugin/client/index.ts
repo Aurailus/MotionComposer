@@ -42,6 +42,8 @@ export default makeEditorPlugin({
 		patchVideoPool();
 
     return project;
+
+
   },
 });
 

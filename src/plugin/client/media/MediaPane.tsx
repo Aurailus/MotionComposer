@@ -1,21 +1,22 @@
 /* @jsxImportSource preact */
 
 import clsx from 'clsx';
-import { VNode } from 'preact';
-import { useEffect, useState, useMemo, useCallback } from 'preact/hooks';
-import { useScenes, Button, useStorage, useApplication} from '@motion-canvas/ui';
+import { Vector2 } from '@motion-canvas/core';
+import { useEffect, useMemo } from 'preact/hooks';
+import { Button, useStorage} from '@motion-canvas/ui';
 
 import styles from './Media.module.scss';
 
 import * as Icon from '../icon';
-import { useUIContext } from '../Contexts';
-import { ClipSource, ClipSourceComponents, ClipTypes } from '../Types';
-import { Vector2 } from '@motion-canvas/core';
 import { useSources } from '../Sources';
+import { useUIContext } from '../Contexts';
+import useShortcutHover from '../shortcut/useShortcutHover';
+import { ClipSource, ClipSourceComponents, ClipTypes } from '../Types';
 
 export default function MediaPane() {
 	const uiCtx = useUIContext()
 	const clipSources = useSources();
+	const [ shortcutRef ] = useShortcutHover<HTMLDivElement>('media');
 
 	const [ view, setView ] = useStorage<'lg' | 'md' | 'sm' | 'list'>('md');
 
@@ -73,7 +74,7 @@ export default function MediaPane() {
 	}, [ clipSources ]);
 
 	return (
-		<div class={styles.media_pane}>
+		<div ref={shortcutRef} class={styles.media_pane}>
 			<div class={styles.view}>
 				<Button onClick={() => setView('lg')} title='Large View'><Icon.ViewLg/></Button>
 				<Button onClick={() => setView('md')} title='Medium View'><Icon.ViewMd/></Button>

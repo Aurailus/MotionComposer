@@ -6,6 +6,7 @@ import { useState, useLayoutEffect } from 'preact/hooks';
 import { OverlayWrapper, PluginOverlayConfig } from '@motion-canvas/ui';
 
 import Timeline from '../timeline/Timeline';
+import { FooterShortcuts } from '../shortcut/FooterShortcuts';
 
 /**
  * Identifies the existing timeline in the DOM, and renders our new timeline overtop of it.
@@ -36,6 +37,9 @@ function Overlay() {
 				height: `${timelineHeight}px` }}>
 				<Timeline/>
 			</div>}
+			<div class={styles.shortcuts_overlay}>
+				<FooterShortcuts/>
+			</div>
 		</OverlayWrapper>
 	);
 }

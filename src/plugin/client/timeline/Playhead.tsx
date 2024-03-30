@@ -7,7 +7,6 @@ import { usePlayerState, usePlayerTime } from '@motion-canvas/ui';
 import styles from './Timeline.module.scss';
 
 import { TimelineContext } from './TimelineContext';
-import { PluginContext } from '../Context';
 
 interface PlayheadProps {
   seeking: Signal<number | null>;
