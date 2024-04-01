@@ -92,9 +92,10 @@ type UseShortcutOptions = {
 	release?: () => void;
 	elem?: HTMLElement,
 	passive?: boolean;
+	holdTimeout?: number;
 }
 
-const HOLD_DELAY_MS = 150;
+const BASE_HOLD_TIMEOUT = 150;
 
 export function useShortcut(key: string, shortcut: UseShortcutOptions | (() => void), deps: any[]) {
 	const options: UseShortcutOptions = useMemo(() => {
@@ -112,6 +113,7 @@ export function useShortcut(key: string, shortcut: UseShortcutOptions | (() => v
 		const listeners: (() => void)[] = [];
 
 		listeners.push(addEventListener(elem, 'keydown', (e: KeyboardEvent) => {
+			if (document.activeElement.tagName === 'INPUT') return;
 			if (e.key.toUpperCase() !== key.toUpperCase()) return;
 			if (!options.passive) {
 				e.preventDefault();
@@ -122,10 +124,11 @@ export function useShortcut(key: string, shortcut: UseShortcutOptions | (() => v
 			timeout = setTimeout(() => {
 				options.hold?.();
 				held = true;
-			}, HOLD_DELAY_MS);
+			}, options.holdTimeout ?? BASE_HOLD_TIMEOUT);
 		}));
 
 		listeners.push(addEventListener(elem, 'keyup', (e: KeyboardEvent) => {
+			if (document.activeElement.tagName === 'INPUT') return;
 			if (e.key.toUpperCase() !== key.toUpperCase()) return;
 			if (!options.passive) {
 				e.preventDefault();

@@ -10,6 +10,5 @@ import MotionComposer from './plugin/client';
 export default makeProject({
   scenes: [ Circle, Square, Rectangle, Video ],
   plugins: [ MotionComposer() ],
-  experimentalFeatures: true,
-	audio: '/media/astronaut_rain.mp3'
+  experimentalFeatures: true
 });

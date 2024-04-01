@@ -45,7 +45,7 @@
           "uuid": 1,
           "type": "scene",
           "path": "Circle",
-          "offset": 2,
+          "offset": 2.3,
           "start": 0.7666666666666667,
           "length": 1.6666666666666667,
           "volume": 1
@@ -54,7 +54,7 @@
           "uuid": 2,
           "type": "scene",
           "path": "Circle",
-          "offset": 3.6666666666666665,
+          "offset": 3.966666666666667,
           "start": 0,
           "length": 2.433333333333333,
           "volume": 1
@@ -63,16 +63,16 @@
           "uuid": 6,
           "type": "video",
           "path": "cobalt.mkv",
-          "offset": 6.1,
+          "offset": 6.866666666666666,
           "start": 22.966666666666665,
-          "length": 4.733333333333333,
+          "length": 4.633333333333334,
           "volume": 1
         },
         {
           "uuid": 5,
           "type": "video",
           "path": "bindless_audio.mkv",
-          "offset": 10.833333333333334,
+          "offset": 11.733333333333333,
           "start": 2.6333333333333333,
           "length": 3.3333333333333335,
           "volume": 1
@@ -81,16 +81,16 @@
           "uuid": 7,
           "type": "image",
           "path": "okami_baiku_cropped.png",
-          "offset": 14.166666666666666,
+          "offset": 15.433333333333334,
           "start": 0,
-          "length": 0.7333333333333333,
+          "length": 1.5666666666666667,
           "volume": 1
         },
         {
           "uuid": 3,
           "type": "scene",
           "path": "Rectangle",
-          "offset": 14.9,
+          "offset": 17.566666666666666,
           "start": 0,
           "length": 3.033333333333333,
           "volume": 1
@@ -99,7 +99,7 @@
           "uuid": 4,
           "type": "scene",
           "path": "Square",
-          "offset": 17.933333333333334,
+          "offset": 20.6,
           "start": 0,
           "length": 2,
           "volume": 1
@@ -108,10 +108,41 @@
           "uuid": 8,
           "type": "scene",
           "path": "Video",
-          "offset": 19.933333333333334,
+          "offset": 25.4,
           "start": 3.433333333333333,
           "length": 1.5666666666666667,
           "volume": 1
+        }
+      ],
+      [
+        {
+          "uuid": 12,
+          "type": "audio",
+          "path": "sphinx_of_black_quartz.wav",
+          "offset": 1.6666666666666667,
+          "start": 0,
+          "length": 1.6666666666666667,
+          "volume": 2.8
+        },
+        {
+          "uuid": 13,
+          "type": "audio",
+          "path": "the_quick_brown_fox.wav",
+          "offset": 4.7,
+          "start": 0.13333333333333333,
+          "length": 3.1666666666666665,
+          "volume": 2.8
+        }
+      ],
+      [
+        {
+          "uuid": 14,
+          "type": "audio",
+          "path": "astronaut_rain.mp3",
+          "offset": 0,
+          "start": 29.333333333333332,
+          "length": 27,
+          "volume": 0.4
         }
       ]
     ]

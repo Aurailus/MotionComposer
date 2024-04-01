@@ -9,12 +9,14 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } fr
 import { addEventListener, ensure } from './Util';
 import { useSignalish } from './Signalish';
 import { Clip, ClipSource, PluginSettings } from './Types';
-import { getUUIDNext, setUUIDNext, useStore } from './Hooks';
+import { getUUIDNext, setUUIDNext, useShortcut, useStore } from './Hooks';
 import { ClipsContext, CurrentClipContext, UIContext, ShortcutsContext } from './Contexts';
 import { getSources, updateSceneSources, useSources } from './Sources';
 import { setVideo } from './scenes/VideoClipScene';
 import { setImage } from './scenes/ImageClipScene';
 import { ShortcutModule } from './shortcut/ShortcutMappings';
+import { AudioCache } from './audio/AudioController';
+import AudioProxy from './audio/AudioProxy';
 
 function metaPluginSettings(meta: ProjectMetadata) {
 	return {
@@ -33,6 +35,7 @@ export default function StateManager({ children }: { children: ComponentChildren
   const scenes = useScenes();
 	useEffect(() => updateSceneSources(scenes), [ scenes ]);
 	const sources = useSources();
+	const audioCache = useMemo(() => new AudioCache(), []);
 
 	const { project, player } = useApplication();
 	const settings = useMemo(() => {
@@ -64,7 +67,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 		const hangingScenes = new Set<Scene>([ ...sceneSubscriptions.current.keys() ]);
 		const sources = getSources();
 
-		clips().forEach((layer) => {
+		clips().forEach((layer, channel) => {
 			let lastEndFrames = -1;
 
 			for (let clip of layer) {
@@ -94,7 +97,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 					lengthFrames,
 					startFrames,
 					sourceFrames,
-					source
+					source,
+					channel
 				};
 
 				if (source?.scene && hangingScenes.has(source.scene)) hangingScenes.delete(source.scene);
@@ -123,8 +127,15 @@ export default function StateManager({ children }: { children: ComponentChildren
 		cacheClipData(true);
 		settings.set('clips', [ ...clips ].map(channel => [ ...channel.map(clip => ({ ...clip, cache: undefined })) ]));
 		settings.set('uuidNext', getUUIDNext());
+		audioCache.setAudioClips(clips.flat(1));
 		return clips;
 	}, []));
+
+	useLayoutEffect(() => {
+		(player.audio as any).setSource = () => { /* no-op */ }
+		(player.audio as any).source = 'SOURCE_EXISTS';
+		(player.audio as any).audioElement = new AudioProxy(audioCache);
+	}, []);
 
 	useLayoutEffect(() => {
 		const MISSING_CLIP_SCENE = scenes.find(s => s.name === 'MissingClipScene');
@@ -202,7 +213,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 					lengthFrames: clipRange[1] - clipRange[0],
 					startFrames: 0,
 					sourceFrames: clipRange[1] - clipRange[0],
-					source: EMPTY_TIMELINE_SOURCE
+					source: EMPTY_TIMELINE_SOURCE,
+					channel: 0
 				}
 				return clip.value
 			}

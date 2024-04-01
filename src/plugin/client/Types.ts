@@ -53,14 +53,18 @@ export type ClipInfo = {
 
 	/** The frame range for the clip in the timeline. */
 	clipRange: [ number, number ];
+
+	/** The channel index for this clip. */
+	channel: number;
+
 } & ({
 	/** The clip's source. */
 	source: ClipSource;
 
 	/** The length of the source in frames. */
 	sourceFrames: number;
-
 } | {
+	/** If the clip's source is undefined, don't have the sourceFrames property. */
 	source: undefined;
 
 	sourceFrames: undefined;

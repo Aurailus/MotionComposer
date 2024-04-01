@@ -39,6 +39,8 @@
   overflow-x: scroll;
   overflow-y: auto;
 
+  &.scrubbing { cursor: none; }
+
   &::-webkit-scrollbar { background-color: var(--background-color); }
   &::-webkit-scrollbar-thumb { border-color: var(--background-color); }
 }
@@ -79,20 +81,19 @@
   }
 }
 
-.clips_track {
-  height: 72px;
+.timeline_track {
   position: relative;
-  margin-top: 4px;
 
-  .clip {
-    margin-bottom: 32px;
+  &.clips_track {
+    height: 76px;
+    margin-top: 4px;
+    padding-bottom: 40px;
   }
-}
 
-.audio_track {
-  height: 32px;
-  display: flex;
-  width: max-content;
+  &.audio_track {
+    height: 36px;
+    padding-bottom: 4px;
+  }
 }
 
 .playhead {

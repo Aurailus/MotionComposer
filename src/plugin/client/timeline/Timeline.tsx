@@ -17,6 +17,9 @@ import useShortcutHover from '../shortcut/useShortcutHover';
 import { Clip, EditorMode, EditorTool, copyClip } from '../Types';
 import { TimelineContext, TimelineContextData } from './TimelineContext';
 import { ImageClip, MissingClip, SceneClip, VideoClip } from './clip/Clip';
+import ScrubPreview from './ScrubPreview';
+import clsx from 'clsx';
+import TimelineTrack from './TimelineTrack';
 
 const NUM_SNAP_FRAMES = 3;
 
@@ -37,24 +40,17 @@ export default function Timeline() {
 
 	const [ scale, setScale ] = useStorage('timeline-scale', 1);
 	const [ offset, setOffset ] = useStorage('timeline-offset', 0);
-	const { player, meta } = useApplication();
 	const { range } = useSharedSettings();
 	const { fps } = usePreviewSettings();
+	const { player } = useApplication();
   const time = usePlayerTime();
-  const scenes = useScenes();
   const clips = useClips();
 
-	const shiftHeld = useKeyHold('Shift');
-	const ctrlHeld = useKeyHold('Control');
-
-	const overwrite = ctrlHeld;
-
 	const duration = useDuration();
-	const tracksRef = useRef<HTMLDivElement>();
 	const wrapperRef = useRef<HTMLDivElement>();
-	const playheadRef = useRef<HTMLDivElement>();
 	const rect = useSize(wrapperRef);
 	const rangeRef = useRef<HTMLDivElement>();
+	const setScrubFrame = useRef<(frame: number, pixels?: number) => void>();
 
 	const [ tool, setTool ] = useStoredState<EditorTool>('shift', 'editor-tool');
 	const [ mode, setMode ] = useStoredState<EditorMode>('compose', 'editor-mode');
@@ -145,48 +141,39 @@ export default function Timeline() {
 
 	useShortcut(Shortcut.RazorTool, {
 		press: () => setTool(tool => (releaseTool.current = tool, 'cut')),
-		holdRelease: () => setTool(releaseTool.current)
+		holdRelease: () => setTool(releaseTool.current),
+		holdTimeout: 300
 	}, []);
 
 	useShortcut(Shortcut.ShiftTool, {
 		press: () => setTool(tool => (releaseTool.current = tool, 'shift')),
-		holdRelease: () => setTool(releaseTool.current)
+		holdRelease: () => setTool(releaseTool.current),
+		holdTimeout: 300
 	}, []);
 
 	useShortcut(Shortcut.SelectTool, {
 		press: () => setTool(tool => (releaseTool.current = tool, 'select')),
-		holdRelease: () => setTool(releaseTool.current)
+		holdRelease: () => setTool(releaseTool.current),
+		holdTimeout: 300
 	}, []);
 
 	useShortcut(Shortcut.ToggleSnapping, {
 		press: () => setSnap(s => !s),
-		holdRelease: () => setSnap(s => !s)
+		holdRelease: () => setSnap(s => !s),
+		holdTimeout: 300
 	}, []);
 
 	useShortcut(Shortcut.SwapTimelineMode, {
 		press: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose'),
-		holdRelease: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose')
+		holdRelease: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose'),
+		holdTimeout: 300
 	}, []);
 
 	useShortcut(Shortcut.HoldTimelineMode, {
 		press: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose'),
-		release: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose')
+		release: () => setMode(mode => mode === 'compose' ? 'clip' : 'compose'),
+		holdTimeout: 300
 	}, []);
-
-  // const handleRangeToCursor = useCallback((side: 'left' | 'right') => {
-	// 	const newPos = state.pointerToFrames();
-  //   meta.shared.range.update(normalizedStart, normalizedEnd, duration, fps);
-  // }, [ range ]);
-
-  // useShortcut(Shortcut.RangeStartToCursor, {
-	// 	press: () => handleRangeToCursor('left'),
-	// 	elem: shortcutRef.current },
-	// [ shortcutRef.current, range ]);
-
-  // useShortcut(Shortcut.RangeEndToCursor, {
-	// 	press: () => handleRangeToCursor('right'),
-	// 	elem: shortcutRef.current },
-	// [ shortcutRef.current, range ]);
 
 	useLayoutEffect(() => {
     wrapperRef.current.scrollLeft = offset;
@@ -230,12 +217,10 @@ export default function Timeline() {
 		wrapperRef.current.scrollLeft = newOffset;
 		if (!isNaN(newScale)) setScale(newScale);
 		if (!isNaN(newOffset)) setOffset(newOffset);
-
-		playheadRef.current.style.left = `${evt.x - rect.x + newOffset}px`;
 	};
 
 	function scrub(pos: number) {
-    const frame = Math.floor(state.pointerToFrames(pos));
+    const frame = Math.round(state.pointerToFrames(pos));
 		const minFrame = player.status.secondsToFrames(range[0]);
 		const maxFrame = Math.min(player.status.secondsToFrames(range[1]), duration);
 
@@ -255,50 +240,35 @@ export default function Timeline() {
 		if (evt.button === MouseButton.Left) {
 			evt.preventDefault();
 			(evt.currentTarget as any).setPointerCapture(evt.pointerId);
-			playheadRef.current.style.display = 'none';
 			scrub(evt.x);
 		}
 		else if (evt.button === MouseButton.Middle) {
 			evt.preventDefault();
 			(evt.currentTarget as any).setPointerCapture(evt.pointerId);
-			wrapperRef.current.style.cursor = 'grabbing';
-			playheadRef.current.style.display = 'none';
 		}
 	}
 
 	function handleScrubMove(evt: PointerEvent) {
-		if ((evt.currentTarget as any).hasPointerCapture(evt.pointerId)) {
-			if (evt.buttons & MouseMask.Primary) {
-				scrub(evt.x);
-			}
-			else if (evt.buttons & MouseMask.Auxiliary) {
-				const newOffset = clamp(
-					0,
-					sizes.playableLength,
-					offset - evt.movementX,
-				);
-				setOffset(newOffset);
-				wrapperRef.current.scrollLeft = newOffset;
-			}
+		if (!(evt.currentTarget as any).hasPointerCapture(evt.pointerId)) return;
+		if (evt.buttons & MouseMask.Primary) {
+			scrub(evt.x);
 		}
-		else if (labelClipDraggingLeftSignal.value === null) {
-			playheadRef.current.style.left = `${evt.x - rect.x + offset}px`;
+		else if (evt.buttons & MouseMask.Auxiliary) {
+			const newOffset = clamp(
+				0,
+				sizes.playableLength,
+				offset - evt.movementX,
+			);
+			setOffset(newOffset);
+			wrapperRef.current.scrollLeft = newOffset;
 		}
 	}
 
 	function handleScrubEnd(evt: PointerEvent) {
-		if (labelClipDraggingLeftSignal.value === null) {
-			playheadRef.current.style.left = `${evt.x - rect.x + offset}px`;
-		}
-		if (
-			evt.button === MouseButton.Left ||
-			evt.button === MouseButton.Middle
-		) {
+		if (evt.button === MouseButton.Left || evt.button === MouseButton.Middle) {
 			seeking.value = null;
-			// warnedAboutRange.current = false;
+			warnedAboutRange.current = false;
 			(evt.currentTarget as any).releasePointerCapture(evt.pointerId);
-			wrapperRef.current.style.cursor = '';
-			playheadRef.current.style.display = '';
 		}
 	}
 
@@ -311,7 +281,7 @@ export default function Timeline() {
 	function fixOverlap(channel: Clip[], newClip: Clip, oldClip: Clip) {
 		let toDelete = [];
 
-		if (overwrite) {
+		if (mode === 'clip') {
 			for (let i = 0; i < channel.length; i++) {
 				let clip = channel[i];
 
@@ -381,12 +351,12 @@ export default function Timeline() {
 		}
 	}
 
-	function handleClipResize(clip: Clip, side: 'left' | 'right', offset: number) {
+	function handleClipResizeStart(clip: Clip, side: 'left' | 'right', offset: number) {
 		const newClips = clips().map(arr => [ ...arr ]);
-		const newClipInd = newClips[0].findIndex(c => c.uuid === clip.uuid);
+		const newClipInd = newClips[clip.cache.channel].findIndex(c => c.uuid === clip.uuid);
 		if (newClipInd === -1) return;
-		const oldClip = newClips[0][newClipInd];
-		const newClip = newClips[0][newClipInd] = copyClip(oldClip);
+		const oldClip = newClips[clip.cache.channel][newClipInd];
+		const newClip = newClips[clip.cache.channel][newClipInd] = copyClip(oldClip);
 
 		if (side === 'right') {
 			const maxNewPos = newClip.cache.sourceFrames - newClip.cache.startFrames + newClip.cache.clipRange[0];
@@ -423,25 +393,25 @@ export default function Timeline() {
 		}
 
 		recomputeFromCache(newClip);
-		fixOverlap(newClips[0], newClip, oldClip);
+		fixOverlap(newClips[clip.cache.channel], newClip, oldClip);
 		modifiedClips(newClips);
 	}
 
-	function handleClipMove(clip: Clip, offset: number) {
+	function handleClipResizeMove(clip: Clip, offset: number) {
 		const newClips = clips().map(arr => [ ...arr ]);
-		const newClipInd = newClips[0].findIndex(c => c.uuid === clip.uuid);
+		const newClipInd = newClips[clip.cache.channel].findIndex(c => c.uuid === clip.uuid);
 		if (newClipInd === -1) return;
-		const oldClip = newClips[0][newClipInd];
-		const newClip = newClips[0][newClipInd] = copyClip(oldClip);
+		const oldClip = newClips[clip.cache.channel][newClipInd];
+		const newClip = newClips[clip.cache.channel][newClipInd] = copyClip(oldClip);
 
 		let newPos = Math.max(newClip.cache.clipRange[0] + offset);
 
 		if (snap) {
-			const snapRight = newClips[0].find(c =>
+			const snapRight = newClips[clip.cache.channel].find(c =>
 				Math.abs(c.cache.clipRange[0] - (newPos + newClip.cache.lengthFrames)) <= NUM_SNAP_FRAMES);
 			if (snapRight) newPos = snapRight.cache.clipRange[0] - newClip.cache.lengthFrames;
 			else {
-				const snapLeft = newClips[0].find(c =>
+				const snapLeft = newClips[clip.cache.channel].find(c =>
 					Math.abs(c.cache.clipRange[1] - newPos) <= NUM_SNAP_FRAMES);
 				if (snapLeft) newPos = snapLeft.cache.clipRange[1];
 			}
@@ -453,7 +423,7 @@ export default function Timeline() {
 		newClip.cache.clipRange[1] = newPos + newClip.cache.lengthFrames;
 
 		recomputeFromCache(newClip);
-		fixOverlap(newClips[0], newClip, oldClip);
+		fixOverlap(newClips[clip.cache.channel], newClip, oldClip);
 		modifiedClips(newClips);
 	}
 
@@ -478,7 +448,7 @@ export default function Timeline() {
 				</div>
 				<div
 					ref={wrapperRef}
-					class={styles.timeline_wrapper}
+					class={clsx(styles.timeline_wrapper, (seeking.value != null) && styles.scrubbing)}
 					onScroll={handleScroll}
 					onWheel={handleWheel}
 					onPointerDown={handleScrubStart}
@@ -499,68 +469,26 @@ export default function Timeline() {
 							<RangeSelector rangeRef={rangeRef}/>
 							<Timestamps/>
 							<Playhead seeking={seeking}/>
-							<div className={styles.clips_track}
-								style={{ width: conversion.framesToPixels(player.status.secondsToFrames(range[1])) }}>
-								{(modifiedClips()[0] ?? []).map(clip => {
-									if (clip.cache.source) {
-										switch (clip.type) {
-											case 'scene': {
-												return (
-													<SceneClip
-														key={clip.uuid}
-														clip={clip}
 
-														onResize={(side, diff) => handleClipResize(clip, side, diff)}
-														onMove={(diff) => handleClipMove(clip, diff)}
-														onCommit={handleClipCommit}
-														onDragClip={(side) => handleDragClip(clip, side)}
-													/>
-												);
-											}
-											case 'video': {
-												return (
-													<VideoClip
-														key={clip.uuid}
-														clip={clip}
+							<TimelineTrack
+								type='video'
+								clips={modifiedClips()[0] ?? []}
+								onClipCommit={handleClipCommit}
+								onClipResizeMove={handleClipResizeMove}
+								onClipResizeStart={handleClipResizeStart}
+								onClipDrag={handleDragClip}
+							/>
 
-														onResize={(side, diff) => handleClipResize(clip, side, diff)}
-														onMove={(diff) => handleClipMove(clip, diff)}
-														onCommit={handleClipCommit}
-														onDragClip={(side) => handleDragClip(clip, side)}
-													/>
-												)
-											}
-											case 'image': {
-												return (
-													<ImageClip
-														key={clip.uuid}
-														clip={clip}
+							{(modifiedClips().slice(1).map(track => <TimelineTrack
+								type='audio'
+								clips={track}
+								onClipCommit={handleClipCommit}
+								onClipResizeMove={handleClipResizeMove}
+								onClipResizeStart={handleClipResizeStart}
+								onClipDrag={handleDragClip}
+							/>))}
 
-														onResize={(side, diff) => handleClipResize(clip, side, diff)}
-														onMove={(diff) => handleClipMove(clip, diff)}
-														onCommit={handleClipCommit}
-														onDragClip={(side) => handleDragClip(clip, side)}
-													/>
-												)
-											}
-											default: {
-												break;
-											}
-										}
-									}
-									return <MissingClip
-										key={clip.uuid}
-										clip={clip}
-
-										onResize={(side, diff) => handleClipResize(clip, side, diff)}
-										onMove={(diff) => handleClipMove(clip, diff)}
-										onCommit={handleClipCommit}
-										onDragClip={(side) => handleDragClip(clip, side)}
-									/>;
-								})}
-							</div>
-							{/* <AudioTrack/> */}
-							<div class={styles.scrub_line} ref={playheadRef}/>
+							<ScrubPreview show={seeking.value == null} wrapper={wrapperRef} setFrame={setScrubFrame}/>
 						</div>
 					</div>
 				</div>
