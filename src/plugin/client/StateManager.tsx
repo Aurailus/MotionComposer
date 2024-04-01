@@ -164,6 +164,24 @@ export default function StateManager({ children }: { children: ComponentChildren
 			scene: EMPTY_TIMELINE_SCENE,
 		};
 
+		const MISSING_CLIP_CLIP: Clip = {
+			type: 'scene',
+			path: 'MissingClipScene',
+			length: 1,
+			offset: 0,
+			start: 0,
+			volume: 0,
+			uuid: -1,
+			cache: {} as any
+		};
+		const MISSING_CLIP_SOURCE: ClipSource = {
+			type: 'scene',
+			path: 'MissingClipScene',
+			name: 'Missing Clip Scene',
+			duration: 1,
+			scene: MISSING_CLIP_SCENE,
+		};
+
 		clip.value = clipsStore()?.[0]?.[0] ?? null;
 
 		/** Helper function to get the best clip for a current frame, and update the current clip & cached clip data. */
@@ -189,6 +207,20 @@ export default function StateManager({ children }: { children: ComponentChildren
 			}
 
 			if (found) {
+				if (!found.cache.source) {
+
+					clip.value = MISSING_CLIP_CLIP;
+					clip.value.cache = {
+						clipRange: found.cache.clipRange,
+						lengthFrames: found.cache.lengthFrames,
+						startFrames: 0,
+						sourceFrames: found.cache.sourceFrames,
+						source: MISSING_CLIP_SOURCE,
+						channel: 0
+					}
+					return clip.value
+				}
+
 				if (found.cache.source?.type === 'video') {
 					setVideo(`/media/${found.cache.source.name!}`, found.cache.source.duration, found.length + found.start);
 					found.cache.source.scene = VIDEO_CLIP_SCENE;
@@ -234,7 +266,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 		(player.playback as any).getNextScene = (function() {
 			getBestClip(clip.value?.cache.clipRange[1] ?? 0);
 			if (!clip.value) return null;
-			return clip.value.cache.source?.scene ?? MISSING_CLIP_SCENE;
+			return clip.value.cache.source.scene;
 		}).bind(player.playback);
 
 
@@ -242,7 +274,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 		(player.playback as any).findBestScene = (function(frame: number) {
 			getBestClip(frame);
-			return clip.value.cache?.source?.scene ?? MISSING_CLIP_SCENE;
+			return clip.value.cache.source.scene;
 		}).bind(player.playback);
 
 		/** Override PlaybackManager.next() to detect clip endings and request the next scene properly. */
@@ -297,7 +329,7 @@ export default function StateManager({ children }: { children: ComponentChildren
 					this.currentScene = scene;
 				}
 
-				if (scene !== EMPTY_TIMELINE_SCENE) {
+				if (scene !== EMPTY_TIMELINE_SCENE && scene !== MISSING_CLIP_SCENE) {
 					this.frame = clip.value.cache.clipRange[0] ?? 0;
 
 					// Reset the current scene.

@@ -23,7 +23,7 @@ export class AudioCache {
 	}
 
 	async setAudioClips(allClips: Clip[]) {
-		this.clips = allClips.filter(clip => clip.type === 'audio' || clip.type === 'video');
+		this.clips = allClips.filter(clip => (clip.type === 'audio' || clip.type === 'video') && clip.cache.source);
 
 		for (const clip of this.clips) {
 			await this.cacheClip(clip.cache.source.name);
