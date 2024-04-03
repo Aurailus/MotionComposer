@@ -121,6 +121,7 @@
     > .clip_wrapper > .label::before {
       background-color: var(--theme);
       font-weight: bold;
+      color: var(--surface-color);
     }
 
     > .clip_wrapper > .label_backdrop {
@@ -231,17 +232,17 @@
 		font-size: 14px;
 		background-color: color-mix(in hsl, white 18%, black);
 		color: color-mix(in hsl, white 40%, black);
-		// border: 2px solid var(--background-color);
 		border: 2px solid color-mix(in hsl, var(--surface-color) 30%, var(--background-color));
 		transition: color 0.15s, background-color 0.15s;
 	}
 
 	&:hover,
 	&:active {
-		&::before {
-			box-shadow: 0 0 0 2px white inset;
+    z-index: 10;
+
+    &::before {
+      box-shadow: 0 0 0 2px white inset;
 		}
-		z-index: 10;
 	}
 }
 

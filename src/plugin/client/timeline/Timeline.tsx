@@ -8,7 +8,7 @@ import styles from './Timeline.module.scss';
 
 import Toolbar from './Toolbar';
 import { Playhead } from './Playhead';
-import { useClips } from '../Contexts';
+import { useClips, useTracks } from '../Contexts';
 import { Timestamps } from './Timestamps';
 import { RangeSelector } from './RangeSelector';
 import { useShortcut, useStore, useStoredState } from '../Hooks';
@@ -20,6 +20,7 @@ import { ImageClip, MissingClip, SceneClip, VideoClip } from './clip/Clip';
 import ScrubPreview from './ScrubPreview';
 import clsx from 'clsx';
 import TimelineTrack from './TimelineTrack';
+import TimelineTrackLabel from './TimelineTrackLabel';
 
 const NUM_SNAP_FRAMES = 3;
 
@@ -45,8 +46,9 @@ export default function Timeline() {
 	const { player } = useApplication();
   const time = usePlayerTime();
   const clips = useClips();
-
+	const { tracks, targetTrack } = useTracks();
 	const duration = useDuration();
+
 	const wrapperRef = useRef<HTMLDivElement>();
 	const rect = useSize(wrapperRef);
 	const rangeRef = useRef<HTMLDivElement>();
@@ -435,16 +437,45 @@ export default function Timeline() {
 		clips(modifiedClips());
 	}
 
+	function handleSetTrackSolo(channel: number, solo: boolean) {
+		const newTracks = [ ...tracks() ];
+		newTracks[channel] = { ...newTracks[channel], solo };
+		tracks(newTracks);
+	}
+
+	function handleSetTrackMuted(channel: number, muted: boolean) {
+		const newTracks = [ ...tracks() ];
+		newTracks[channel] = { ...newTracks[channel], muted };
+		tracks(newTracks);
+	}
+
+	function handleSetTrackLocked(channel: number, locked: boolean) {
+		const newTracks = [ ...tracks() ];
+		newTracks[channel] = { ...newTracks[channel], locked };
+		tracks(newTracks);
+	}
+
+	function handleSetTargetTrack(channel: number) {
+		targetTrack(channel);
+	}
+
 	return (
 		<TimelineContext.Provider value={state}>
 			<div class={styles.timeline}>
 				<Toolbar/>
 
 				<div class={styles.timeline_labels}>
-					<div class={styles.timeline_label}><label>Clips</label></div>
-					{/* <div class={styles.timeline_label}><label>Audio 1</label></div>
-					<div class={styles.timeline_label}><label>Audio 2</label></div>
-					<div class={styles.timeline_label}><label>Audio 3</label></div> */}
+					{(tracks().map((track, i) => <TimelineTrackLabel
+						channel={i}
+						solo={track.solo}
+						locked={track.locked}
+						muted={track.muted}
+						target={targetTrack() === i}
+						setSolo={(solo: boolean) => handleSetTrackSolo(i, solo)}
+						setLocked={(locked: boolean) => handleSetTrackLocked(i, locked)}
+						setMuted={(muted: boolean) => handleSetTrackMuted(i, muted)}
+						setAsTarget={() => handleSetTargetTrack(i)}
+					/>))}
 				</div>
 				<div
 					ref={wrapperRef}

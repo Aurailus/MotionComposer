@@ -56,16 +56,16 @@
           "path": "Circle",
           "offset": 3.966666666666667,
           "start": 0,
-          "length": 2.433333333333333,
+          "length": 2.966666666666667,
           "volume": 1
         },
         {
           "uuid": 6,
           "type": "video",
           "path": "cobalt.mkv",
-          "offset": 6.866666666666666,
-          "start": 22.966666666666665,
-          "length": 4.633333333333334,
+          "offset": 6.933333333333334,
+          "start": 23.033333333333335,
+          "length": 4.566666666666666,
           "volume": 1
         },
         {
@@ -108,7 +108,7 @@
           "uuid": 8,
           "type": "scene",
           "path": "Video2",
-          "offset": 25.4,
+          "offset": 219.3,
           "start": 3.433333333333333,
           "length": 1.5666666666666667,
           "volume": 1
@@ -119,16 +119,16 @@
           "uuid": 12,
           "type": "audio",
           "path": "sphinx_of_black_quartz.wav",
-          "offset": 1.6666666666666667,
+          "offset": 0,
           "start": 0,
-          "length": 1.6666666666666667,
+          "length": 2.6666666666666665,
           "volume": 2.8
         },
         {
           "uuid": 13,
           "type": "audio",
           "path": "the_quick_brown_fox.wav",
-          "offset": 4.7,
+          "offset": 3.566666666666667,
           "start": 0.13333333333333333,
           "length": 3.1666666666666665,
           "volume": 2.8
@@ -141,10 +141,44 @@
           "path": "astronaut_rain.mp3",
           "offset": 0,
           "start": 29.333333333333332,
-          "length": 27,
+          "length": 222.06666666666666,
+          "volume": 0.4
+        }
+      ],
+      [
+        {
+          "uuid": 18,
+          "type": "audio",
+          "path": "astronaut_rain.mp3",
+          "offset": 30.933333333333334,
+          "start": 60.266666666666666,
+          "length": 33.8,
           "volume": 0.4
         }
       ]
-    ]
+    ],
+    "tracks": [
+      {
+        "solo": false,
+        "muted": false,
+        "locked": false
+      },
+      {
+        "solo": false,
+        "muted": false,
+        "locked": false
+      },
+      {
+        "solo": false,
+        "muted": false,
+        "locked": false
+      },
+      {
+        "solo": false,
+        "muted": false,
+        "locked": false
+      }
+    ],
+    "targetTrack": 3
   }
 }

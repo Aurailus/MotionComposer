@@ -8,9 +8,9 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } fr
 
 import { addEventListener, ensure } from './Util';
 import { useSignalish } from './Signalish';
-import { Clip, ClipSource, PluginSettings } from './Types';
+import { Clip, ClipSource, PluginSettings, Track } from './Types';
 import { getUUIDNext, setUUIDNext, useShortcut, useStore } from './Hooks';
-import { ClipsContext, CurrentClipContext, UIContext, ShortcutsContext } from './Contexts';
+import { ClipsContext, CurrentClipContext, UIContext, ShortcutsContext, TracksContext } from './Contexts';
 import { getSources, updateSceneSources, useSources } from './Sources';
 import { setVideo } from './scenes/VideoClipScene';
 import { setImage } from './scenes/ImageClipScene';
@@ -35,7 +35,7 @@ export default function StateManager({ children }: { children: ComponentChildren
   const scenes = useScenes();
 	useEffect(() => updateSceneSources(scenes), [ scenes ]);
 	const sources = useSources();
-	const audioCache = useMemo(() => new AudioCache(), []);
+	const audio = useMemo(() => new AudioCache(), []);
 
 	const { project, player } = useApplication();
 	const settings = useMemo(() => {
@@ -45,6 +45,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 	}, [ project.meta ]);
 
 	const clipsStore = useStore<Clip[][]>([]);
+	const tracksStore = useStore<Track[]>([]);
+	const targetTrackStore = useStore<number>(1);
 	const sceneSubscriptions = useRef<Map<Scene, (() => void)>>(new Map());
 
 	const clip = useSignal<Clip | null>(null);
@@ -118,7 +120,17 @@ export default function StateManager({ children }: { children: ComponentChildren
 			}
 		});
 
-		if (!immediate) clips([ ...clips() ]);
+		if (!immediate) {
+			clips([ ...clips() ]);
+			const numAudioTracks = Math.max(clips().length - 1, 1);
+			tracks(oldTracks => {
+				let tracks = [ ...oldTracks ];
+				while (tracks.length - 1 < numAudioTracks) tracks.push({ solo: false, muted: false, locked: false });
+				if (tracks.length - 1 > numAudioTracks) tracks = tracks.slice(0, numAudioTracks + 1);
+				return tracks;
+			});
+			if (targetTrack() >= numAudioTracks + 1 || targetTrack() < 1) targetTrack(1);
+		}
 	}, []);
 
 	const clips = useSignalish(() => clipsStore(), useCallback((clips: Clip[][]) => {
@@ -127,14 +139,30 @@ export default function StateManager({ children }: { children: ComponentChildren
 		cacheClipData(true);
 		settings.set('clips', [ ...clips ].map(channel => [ ...channel.map(clip => ({ ...clip, cache: undefined })) ]));
 		settings.set('uuidNext', getUUIDNext());
-		audioCache.setAudioClips(clips.flat(1));
+		audio.setClips(clips.flat(1));
 		return clips;
+	}, []));
+
+	const tracks = useSignalish(() => tracksStore(), useCallback((tracks: Track[]) => {
+		console.warn('SETTING TRACKS');
+		tracksStore(tracks);
+		settings.set('tracks', tracks);
+		audio.setTracks(tracks);
+		return tracks;
+	}, []));
+
+
+	const targetTrack = useSignalish(() => targetTrackStore(), useCallback((targetTrack: number) => {
+		console.warn('SETTING TARGET TRACK');
+		targetTrackStore(targetTrack);
+		settings.set('targetTrack', targetTrack);
+		return targetTrack;
 	}, []));
 
 	useLayoutEffect(() => {
 		(player.audio as any).setSource = () => { /* no-op */ }
 		(player.audio as any).source = 'SOURCE_EXISTS';
-		(player.audio as any).audioElement = new AudioProxy(audioCache);
+		(player.audio as any).audioElement = new AudioProxy(audio);
 	}, []);
 
 	useLayoutEffect(() => {
@@ -383,7 +411,11 @@ export default function StateManager({ children }: { children: ComponentChildren
 	}, [ clipsStore() ]);
 
 	useEffect(() => {
-		if (clips().length > 0) cacheClipData();
+		if (clips().length <= 0) return;
+		targetTrackStore(settings.get('targetTrack') ?? 1);
+		tracks(settings.get('tracks') ?? []);
+		console.log(tracks())
+		cacheClipData();
 	}, [ sources ]);
 
 	// Recompute clips when the duration changes, i.e. when the scenes load.
@@ -418,6 +450,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 		addSourceDragPos
 	}), [ mediaTabVisible ]);
 
+	const tracksContextData = useMemo(() => ({ tracks, targetTrack }), [ tracks(), targetTrack() ]);
+
 	const clipsContextData = useMemo(() => ({ clips }), [ clips() ]);
 
 	const currentClipContextData = useMemo(() => ({ clip }), []);
@@ -427,13 +461,15 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 	return (
 		<UIContext.Provider value={uiContextData}>
-			<ClipsContext.Provider value={clipsContextData}>
-				<CurrentClipContext.Provider value={currentClipContextData}>
-					<ShortcutsContext.Provider value={shortcutsContextData}>
-						{children}
-					</ShortcutsContext.Provider>
-				</CurrentClipContext.Provider>
-			</ClipsContext.Provider>
+			<TracksContext.Provider value={tracksContextData}>
+				<ClipsContext.Provider value={clipsContextData}>
+					<CurrentClipContext.Provider value={currentClipContextData}>
+						<ShortcutsContext.Provider value={shortcutsContextData}>
+							{children}
+						</ShortcutsContext.Provider>
+					</CurrentClipContext.Provider>
+				</ClipsContext.Provider>
+			</TracksContext.Provider>
 		</UIContext.Provider>
 	);
 }

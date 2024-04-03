@@ -4,7 +4,7 @@ import { Vector2 } from '@motion-canvas/core';
 import { useContext, useState, useEffect } from 'preact/hooks';
 
 import { Signalish } from './Signalish';
-import { Clip, ClipSource } from './Types';
+import { Clip, ClipSource, Track } from './Types';
 import { ShortcutModule } from './shortcut/ShortcutMappings';
 
 /** Clips Context. */
@@ -24,6 +24,19 @@ export function useCurrentClip() {
 	const [ clip, setClip ] = useState<Clip>(currentClipSignal.peek());
 	useEffect(() => currentClipSignal.subscribe(setClip), [ currentClipSignal ]);
 	return clip;
+}
+
+/** Tracks Context. */
+
+export interface TracksContextData {
+	tracks: Signalish<readonly Track[]>;
+	targetTrack: Signalish<number>;
+}
+
+export const TracksContext = createContext<TracksContextData>({} as any);
+
+export function useTracks() {
+	return useContext(TracksContext);
 }
 
 /** UI Context. */

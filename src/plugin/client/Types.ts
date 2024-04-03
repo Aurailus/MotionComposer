@@ -19,6 +19,8 @@ export const ClipSourceComponents: Record<ClipType, typeof SceneClipItem> = {
 export interface PluginSettings {
 	uuidNext: number;
 	clips: Clip[][];
+	tracks: Track[];
+	targetTrack: number;
 }
 
 export interface ClipSource {
@@ -94,6 +96,15 @@ export interface Clip {
 
 	/** Cached clip info. This will exist if and only if the clip's source was resolved. */
 	cache: ClipInfo;
+}
+
+export interface Track {
+	// name?: string;
+	// color?: string;
+
+	muted: boolean;
+	solo: boolean;
+	locked: boolean;
 }
 
 export type EditorTool = 'select' | 'cut' | 'shift';

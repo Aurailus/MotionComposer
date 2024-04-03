@@ -13,3 +13,7 @@ export { default as Hand } from './HandIcon';
 export { default as Composition } from './CompositionIcon';
 export { default as Clipper } from './ClipperIcon';
 export { default as Magnet } from './MagnetIcon';
+export { default as Lock } from './LockIcon';
+export { default as Mute } from './MuteIcon';
+export { default as Solo } from './SoloIcon';
+export { default as Target } from './TargetIcon';

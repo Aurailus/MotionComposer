@@ -1,4 +1,5 @@
-import { Clip } from "../Types";
+import { AudioData } from "@motion-canvas/core";
+import { Clip, Track } from "../Types";
 
 export const BUFFER_QUEUE_LOOKAHEAD = 200;
 
@@ -6,8 +7,15 @@ export class AudioCache {
 	private context: AudioContext;
 
 	private volume: number = 1;
+
 	private clips: Clip[] = [];
+	// private tracks: Track[] = [];
+	private audibleTracks: boolean[];
+
+	private data = new Map<string, AudioData>;
 	private buffers = new Map<string, AudioBuffer>;
+	private buffering = new Set<string>();
+
 	private activeClips = new Map<number, [ Clip, AudioBufferSourceNode, GainNode ]>();
 
 	private latencyBehaviour: 'desync' | 'prep_audio' | 'delay_video' = 'prep_audio';
@@ -16,18 +24,36 @@ export class AudioCache {
 		this.context = new AudioContext({ latencyHint: 'interactive' });
 	}
 
-	async cacheClip(audio: string) {
-		if (this.buffers.has(audio)) return;
+	async cacheSource(audio: string) {
+		if (this.buffers.has(audio) || this.buffering.has(audio)) return;
+		this.buffering.add(audio);
 		const buffer = await this.context.decodeAudioData(await (await fetch(`/media/${audio}`)).arrayBuffer());
 		this.buffers.set(audio, buffer);
+		this.generateWaveform(audio);
+		this.buffering.delete(audio);
 	}
 
-	async setAudioClips(allClips: Clip[]) {
+	async setClips(allClips: Clip[]) {
 		this.clips = allClips.filter(clip => (clip.type === 'audio' || clip.type === 'video') && clip.cache.source);
 
+		console.time('caching clips');
+
 		for (const clip of this.clips) {
-			await this.cacheClip(clip.cache.source.name);
+			await this.cacheSource(clip.cache.source.name);
 		}
+
+		console.timeEnd('caching clips');
+	}
+
+	async setTracks(tracks: Track[]) {
+		const numSolos = tracks.filter(track => track.solo).length;
+		this.audibleTracks = [];
+		for (let i = 0; i < tracks.length; i++) {
+			if (numSolos === 0) this.audibleTracks.push(!tracks[i].muted);
+			else if (numSolos === 1) this.audibleTracks.push(tracks[i].solo);
+			else this.audibleTracks.push(tracks[i].solo && !tracks[i].muted);
+		}
+		this.setVolume(this.volume, true);
 	}
 
 	getDuration() {
@@ -54,9 +80,10 @@ export class AudioCache {
 		for (const clip of this.clips) {
 			if (clip.length + clip.offset < time || clip.offset - BUFFER_QUEUE_LOOKAHEAD / 1000 > time) continue;
 			if (this.activeClips.has(clip.uuid)) continue;
+			const trackVolume = this.audibleTracks[clip.cache.channel] ? 1 : 0;
 
 			const source = new AudioBufferSourceNode(this.context, { buffer: this.buffers.get(clip.cache.source.name) });
-			const gain = new GainNode(this.context, { gain: Math.pow(clip.volume * this.volume, 1) });
+			const gain = new GainNode(this.context, { gain: Math.pow(clip.volume * this.volume * trackVolume, 1) });
 
 			source.connect(gain).connect(this.context.destination);
 
@@ -69,10 +96,57 @@ export class AudioCache {
 		}
 	}
 
-	setVolume(volume: number) {
-		if (this.volume === volume) return;
-		console.log('setting volume to ', volume);
+	setVolume(volume: number, force?: boolean) {
+		if (this.volume === volume && !force) return;
 		this.volume = volume;
-		this.activeClips.forEach(([ clip, , gain ]) => gain.gain.value = Math.pow(clip.volume * this.volume, 1));
+		this.activeClips.forEach(([ clip, , gain ]) => {
+			const trackVolume = this.audibleTracks[clip.cache.channel] ? 1 : 0;
+			gain.gain.value = Math.pow(clip.volume * this.volume * trackVolume, 1)
+		});
+	}
+
+	private generateWaveform(audio: string) {
+		const buffer = this.buffers.get(audio);
+		if (!buffer) return;
+
+		const sampleSize = 256;
+    const samples = ~~(buffer.length / sampleSize);
+    const peaks = [];
+
+    let absoluteMax = 0;
+
+    for (let channelId = 0; channelId < buffer.numberOfChannels; channelId++) {
+      const channel = buffer.getChannelData(channelId);
+      for (let i = 0; i < samples; i++) {
+        const start = ~~(i * sampleSize);
+        const end = ~~(start + sampleSize);
+
+        let min = channel[start];
+        let max = min;
+
+        for (let j = start; j < end; j++) {
+          const value = channel[j];
+          if (value > max) {
+            max = value;
+          }
+          if (value < min) {
+            min = value;
+          }
+        }
+
+        if (channelId === 0 || max > peaks[i * 2]) peaks[i * 2] = max;
+        if (channelId === 0 || min < peaks[i * 2 + 1]) peaks[i * 2 + 1] = min;
+
+        if (max > absoluteMax) absoluteMax = max;
+        if (Math.abs(min) > absoluteMax) absoluteMax = Math.abs(min);
+      }
+    }
+
+		this.data.set(audio, {
+      peaks,
+      absoluteMax,
+      length: samples,
+      sampleRate: (buffer.sampleRate / sampleSize) * 2,
+    });
 	}
 }
