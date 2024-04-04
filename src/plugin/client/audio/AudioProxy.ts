@@ -1,12 +1,12 @@
 import { ensure } from '../Util';
-import { AudioCache, BUFFER_QUEUE_LOOKAHEAD } from './AudioController';
+import AudioController, { BUFFER_QUEUE_LOOKAHEAD } from './AudioController';
 
 const BUFFER_INTERVAL = 100;
 
 ensure(BUFFER_INTERVAL + 50 < BUFFER_QUEUE_LOOKAHEAD, 'BUFFER_INTERVAL must be less than BUFFER_QUEUE_LOOKAHEAD.');
 
 export default class AudioProxy {
-	private controller: AudioCache;
+	private controller: AudioController;
 
 	private isMuted = false;
 	private globalVolume = 1;
@@ -15,7 +15,7 @@ export default class AudioProxy {
 	private playbackTime = 0;
 	private abort: AbortController | null = null;
 
-	constructor (cache: AudioCache) {
+	constructor (cache: AudioController) {
 		this.controller = cache;
 	}
 
@@ -73,21 +73,20 @@ export default class AudioProxy {
 		// If pausing happened before cache finished starting.
 		if (this.paused) return;
 
-		let lastTime = 0;
+		let lastTime = this.controller.getCurrentTime();
 		let sinceLastBuffer = 0;
 		const abort = new AbortController();
 		this.abort = abort;
 
-		const update = (time: number) => {
+		const update = () => {
 			if (abort.signal.aborted) return;
-			if (lastTime === 0) lastTime = time;
-
-			let delta = time - lastTime;
-			this.playbackTime += delta / 1000;
+			const time = this.controller.getCurrentTime();
+			const delta = time - lastTime;
+			this.playbackTime += delta;
 			lastTime = time;
 			sinceLastBuffer += delta;
 
-			if (sinceLastBuffer > BUFFER_INTERVAL) {
+			if (sinceLastBuffer > BUFFER_INTERVAL / 1000) {
 				this.controller.bufferClips(this.playbackTime);
 				sinceLastBuffer = 0;
 			}

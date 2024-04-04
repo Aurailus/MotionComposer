@@ -4,7 +4,7 @@
     "background": null,
     "range": [
       0,
-      220.399999
+      null
     ],
     "size": {
       "x": 1920,
@@ -45,9 +45,9 @@
           "uuid": 1,
           "type": "scene",
           "path": "Circle",
-          "offset": 2.3,
-          "start": 0.7666666666666667,
-          "length": 1.6666666666666667,
+          "offset": 2.3333333333333335,
+          "start": 0.8,
+          "length": 1.6333333333333333,
           "volume": 1
         },
         {
@@ -141,7 +141,7 @@
           "path": "astronaut_rain.mp3",
           "offset": 0,
           "start": 29.333333333333332,
-          "length": 221.23333333333332,
+          "length": 220.86666666666667,
           "volume": 0.4
         }
       ],
@@ -150,9 +150,9 @@
           "uuid": 18,
           "type": "audio",
           "path": "astronaut_rain.mp3",
-          "offset": 7.133333333333334,
-          "start": 36.46666666666667,
-          "length": 7.433333333333334,
+          "offset": 6.333333333333333,
+          "start": 35.666666666666664,
+          "length": 21.633333333333333,
           "volume": 0.4
         }
       ]

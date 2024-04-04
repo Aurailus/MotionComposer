@@ -414,7 +414,6 @@ export default function StateManager({ children }: { children: ComponentChildren
 		if (clips().length <= 0) return;
 		targetTrackStore(settings.get('targetTrack') ?? 1);
 		tracks(settings.get('tracks') ?? []);
-		console.log(tracks())
 		cacheClipData();
 	}, [ sources ]);
 

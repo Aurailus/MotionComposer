@@ -1,9 +1,19 @@
 import { signal, Signal } from '@preact/signals';
-import { AudioData } from '@motion-canvas/core';
 
 import { Clip, ClipSource, Track } from '../Types';
 
 export const BUFFER_QUEUE_LOOKAHEAD = 200;
+
+export interface WaveformData {
+	peaks: Uint16Array;
+	sampleRate: number;
+}
+
+export interface AudioData {
+	duration: number;
+	absoluteMax: number;
+	peaks: WaveformData[];
+}
 
 export default class AudioController {
 	private context: AudioContext;
@@ -58,6 +68,10 @@ export default class AudioController {
 		return this.clips.reduce((max, clip) => Math.max(max, clip.length + clip.offset), 0);
 	}
 
+	getCurrentTime() {
+		return this.context.currentTime;
+	}
+
 	stop() {
 		this.activeClips.forEach(([ , source ]) => source.stop());
 		this.activeClips.clear();
@@ -103,56 +117,65 @@ export default class AudioController {
 		});
 	}
 
-	getWaveform(source: ClipSource) {
+	getAudioData(source: ClipSource) {
 		let data = this.data.get(source.name);
 		if (!data) this.data.set(source.name, data = signal(null));
 		return data;
 	}
 
 	private generateWaveform(audio: string) {
+		const MAX_SAMPLE_RATE = 30 * 128; // 128 samples per frame.
+		// const MIN_SAMPLE_RATE = 30 * 1; // 1 sample per frame.
+		const MAX_PEAKS_ARR_LEN = 2048;
+
 		const buffer = this.buffers.get(audio);
 		if (!buffer) return;
 
-		const sampleSize = 256;
-    const samples = ~~(buffer.length / sampleSize);
-    const peaks = [];
+		const samplesPerSecond = Math.min(buffer.sampleRate, MAX_SAMPLE_RATE);
+		const len = samplesPerSecond * buffer.duration;
+		const samplesPerInd = buffer.sampleRate / samplesPerSecond;
 
+		const peaksFloat = new Float32Array(len);
     let absoluteMax = 0;
 
     for (let channelId = 0; channelId < buffer.numberOfChannels; channelId++) {
       const channel = buffer.getChannelData(channelId);
-      for (let i = 0; i < samples; i++) {
-        const start = ~~(i * sampleSize);
-        const end = ~~(start + sampleSize);
-
-        let min = channel[start];
-        let max = min;
-
-        for (let j = start; j < end; j++) {
-          const value = channel[j];
-          if (value > max) {
-            max = value;
-          }
-          if (value < min) {
-            min = value;
-          }
-        }
-
-        if (channelId === 0 || max > peaks[i * 2]) peaks[i * 2] = max;
-        if (channelId === 0 || min < peaks[i * 2 + 1]) peaks[i * 2 + 1] = min;
-
-        if (max > absoluteMax) absoluteMax = max;
-        if (Math.abs(min) > absoluteMax) absoluteMax = Math.abs(min);
+      for (let i = 0; i < len; i++) {
+        const start = ~~(i * samplesPerInd);
+        const end = ~~(start + samplesPerInd);
+        let sum = Math.abs(channel[start]);
+        for (let j = start + 1; j < end; j++) sum += Math.abs(channel[j]);
+        const avg = sum / samplesPerInd;
+				peaksFloat[i] += avg;
       }
     }
+
+		for (let i = 0; i < len; i++) {
+			peaksFloat[i] = peaksFloat[i] / buffer.numberOfChannels;
+			if (peaksFloat[i] > absoluteMax) absoluteMax = peaksFloat[i];
+		}
+
+		const fullPeaks = new Uint16Array(len);
+		for (let i = 0; i < len; i++) fullPeaks[i] = ((peaksFloat[i] / absoluteMax) * 0xFFFF) | 0;
+
+		const peaks: WaveformData[] = [ { peaks: fullPeaks, sampleRate: fullPeaks.length / buffer.duration } ];
+		while (peaks[peaks.length - 1].peaks.length > MAX_PEAKS_ARR_LEN) {
+			const last = peaks[peaks.length - 1];
+			const newPeaks = new Uint16Array(Math.ceil(last.peaks.length / 2));
+			for (let i = 0; i < newPeaks.length - 1; i++)
+				newPeaks[i] = (last.peaks[i * 2] + last.peaks[i * 2 + 1]) / 2;
+			newPeaks[newPeaks.length - 1] = (last.peaks[(newPeaks.length - 1) * 2] + last.peaks[last.peaks.length - 1]) / 2;
+			peaks.push({ peaks: newPeaks, sampleRate: last.sampleRate / 2 });
+		}
+
+		console.log('Generated waveform for', audio, 'with', peaks.length, 'peaks graphs');
 
 		let data = this.data.get(audio);
 		if (!data) this.data.set(audio, data = signal(null));
 		data.value = {
 			peaks,
 			absoluteMax,
-			length: samples,
-			sampleRate: buffer.sampleRate / sampleSize,
+			duration: buffer.duration
 		};
 		return data;
 	}

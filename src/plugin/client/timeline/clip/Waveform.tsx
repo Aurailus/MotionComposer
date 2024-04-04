@@ -1,37 +1,26 @@
 /* @jsxImportSource preact */
 
-import {
-  useLayoutEffect,
-  useState,
-  useContext,
-  useRef,
-  useMemo,
-} from "preact/hooks";
+import { useApplication } from '@motion-canvas/ui';
+import { useRef, useMemo, useContext, useState } from 'preact/hooks';
 
-import styles from "./Clip.module.scss";
+import { Clip } from '../../Types';
+import { TimelineContext } from '../TimelineContext';
+import { AudioData } from '../../audio/AudioController';
 
-import * as Icon from "../../icon";
-import { useAudio } from "../../Contexts";
-import Clip, { ClipChildProps } from "./Clip";
-import { TimelineContext } from "../TimelineContext";
-import { useApplication } from "@motion-canvas/ui";
-import { clamp } from "@motion-canvas/core";
+interface Props {
+	clip: Clip;
+	audio: AudioData;
+	width: number;
+	height: number;
+}
 
-const CANVAS = document.createElement("canvas");
-const CTX = CANVAS.getContext("2d");
-
-const CHUNKINESS = 3;
-const OVERFLOW = 256;
-const WAVEFORM_AMP = 6;
-const WAVEFORM_EXP = 1.7;
-
-export default function AudioClip({ clip, ...props }: ClipChildProps) {
-  const audio = useAudio();
-  const { player } = useApplication();
-  const audioData = audio.getAudioData(clip.cache.source).value;
+export default function Waveform({ audio, clip, width, height }: Props) {
+	const { player } = useApplication();
   const clipRef = useRef<HTMLDivElement>();
-  const [imgSrc, setImgSrc] = useState<string>("");
-  const [imgLeft, setImgLeft] = useState<number>(0);
+
+  const imgRef = useRef<HTMLImageElement>();
+	const imgSrc = useRef<string>('');
+  const imgLeft = useRef<number>(0);
 
   const {
     firstVisibleFrame: viewStartFrame,
@@ -116,7 +105,7 @@ export default function AudioClip({ clip, ...props }: ClipChildProps) {
     CANVAS.height = HEIGHT * 2;
 
     CTX.clearRect(0, 0, lengthPx, HEIGHT * 2);
-    const color = getComputedStyle(clipRef.current).getPropertyValue("--color");
+    const color = getComputedStyle(clipRef.current).getPropertyValue('--color');
     CTX.fillStyle = color;
 
     const startSec =
@@ -178,118 +167,4 @@ export default function AudioClip({ clip, ...props }: ClipChildProps) {
     audioData,
     clipRef.current,
   ]);
-
-  return (
-    <Clip
-      {...props}
-      clip={clip}
-      class={styles.audio_clip}
-      ref={clipRef}
-      stickyChildren={
-        <>
-          <Icon.Audio />
-          <p className={styles.name}>
-            <span
-              className={styles.source}
-              onMouseDown={(e) => (e.preventDefault(), e.stopPropagation())}
-            >
-              {clip.cache.source?.name ?? clip.path}
-            </span>
-          </p>
-        </>
-      }
-      staticChildren={
-        <img class={styles.waveform} src={imgSrc} style={{ left: imgLeft }} />
-      }
-    />
-  );
 }
-
-// const CANVAS_WIDTH = 1024;
-// const CANVAS_HEIGHT = 24;
-// const CHONKYNESS = 3;
-// const LAYERS = 4;
-
-// interface AudioClipProps {
-// 	clip: Clip;
-// 	range: [ number, number ];
-// }
-
-// export function AudioClip({ clip, range }: AudioClipProps) {
-// 	const { player } = useApplication();
-
-// 	const containerRef = useRef<HTMLDivElement>();
-// 	const canvasRef = useRef<HTMLCanvasElement>();
-// 	const context = useMemo(() => canvasRef.current?.getContext('2d'), [ canvasRef.current ]);
-// 	const { pixelsToFrames, framesToPixels } = useContext(TimelineContext);
-
-// 	const audioData = useSubscribableValue(player.audio.onDataChanged);
-// 	const {
-// 		density,
-// 		firstVisibleFrame,
-// 		lastVisibleFrame
-// 	} = useContext(TimelineContext);
-
-// 	useLayoutEffect(() => {
-//     if (!context) return;
-//     context.clearRect(0, 0, CANVAS_WIDTH, 40);
-//     if (!audioData) return;
-
-// 		context.fillStyle = getComputedStyle(context.canvas).getPropertyValue('fill');
-
-//     const start =
-//       (player.status.framesToSeconds(firstVisibleFrame) - 0) *
-//       audioData.sampleRate;
-//     const end =
-//       (player.status.framesToSeconds(lastVisibleFrame) - 0) *
-//       audioData.sampleRate;
-
-//     const flooredStart = Math.floor(start);
-//     const padding = flooredStart - start;
-//     const length = end - start;
-//     const step = Math.ceil(density);
-
-// 		const timePerChonk = player.status.framesToSeconds(pixelsToFrames(CHONKYNESS));
-// 		const samplesPerChonk = timePerChonk * audioData.sampleRate;
-
-// 		for (let i = 0; i < CANVAS_WIDTH / CHONKYNESS; i++) {
-// 			let start = i * samplesPerChonk;
-
-// 			for (let j = 0; j < LAYERS; j++) {
-// 				const offset = Math.floor(start + samplesPerChonk / LAYERS * j / 2) * 2;
-// 				const a = (audioData.peaks[offset] / audioData.absoluteMax) * CANVAS_HEIGHT / 2;
-// 				const b = (audioData.peaks[offset + 1] / audioData.absoluteMax) * CANVAS_HEIGHT / 2;
-// 				const min = Math.min(a, b);
-// 				const max = Math.max(a, b);
-
-// 				context.fillRect(
-// 					i * CHONKYNESS,
-// 					CANVAS_HEIGHT / 2 - max,
-// 					CHONKYNESS,
-// 					-min + max
-// 				);
-// 			}
-// 		}
-//   }, [,
-//     context,
-//     audioData,
-//     density,
-//     firstVisibleFrame,
-//     lastVisibleFrame,
-// 	]);
-
-// 	return (
-//     <Clip
-// 			class={styles.audio_clip}
-// 			clip={clip}
-// 			labelChildren={
-// 				<div className={styles.name} title='Go to source'>
-// 					Audio
-// 				</div>
-// 			}>
-// 				{/* <div ref={containerRef} className={styles.audio_container}>
-// 					<canvas ref={canvasRef} className={styles.audio_waveform} width={CANVAS_WIDTH} height={CANVAS_HEIGHT}/>
-// 				</div> */}
-//     </Clip>
-//   );
-// }
