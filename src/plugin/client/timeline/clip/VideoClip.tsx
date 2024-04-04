@@ -11,8 +11,8 @@ export default function VideoClip({ clip, ...props }: ClipChildProps) {
 			{...props}
 	 		clip={clip}
 			class={styles.video_clip}
-			labelChildren={
-				<div class={styles.clip_label}>
+			stickyChildren={
+				<>
 					<Icon.Video/>
 					<p className={styles.name}>
 						<span
@@ -20,7 +20,7 @@ export default function VideoClip({ clip, ...props }: ClipChildProps) {
 							onMouseDown={e => (e.preventDefault(), e.stopPropagation())}
 						>{clip.cache.source.name ?? clip.path}</span>
 					</p>
-				</div>
+				</>
 			}
 		/>
   );

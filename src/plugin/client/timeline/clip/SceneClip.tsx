@@ -28,14 +28,14 @@ export default function SceneClip({ clip, ...props }: ClipChildProps) {
 	 		clip={clip}
 			class={styles.scene_clip}
 
-			attachedChildren={
+			staticChildren={
 				events
 					.filter(event => event.initialTime < clip.start + clip.length - player.status.framesToSeconds(1))
 					.map(event => <EventLabel key={event.name} event={event} clip={clip}/>)
 			}
 
-			labelChildren={
-				<div class={styles.clip_label}>
+			stickyChildren={
+				<>
 					<Icon.Scene/>
 					<p className={styles.name}>
 						<span
@@ -44,7 +44,7 @@ export default function SceneClip({ clip, ...props }: ClipChildProps) {
 							onMouseDown={e => (e.preventDefault(), e.stopPropagation())}
 						>{scene.name}</span>
 					</p>
-				</div>
+				</>
 			}
 		/>
   );

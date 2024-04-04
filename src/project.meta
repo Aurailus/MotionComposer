@@ -4,7 +4,7 @@
     "background": null,
     "range": [
       0,
-      null
+      220.399999
     ],
     "size": {
       "x": 1920,
@@ -92,14 +92,14 @@
           "path": "Rectangle",
           "offset": 17.566666666666666,
           "start": 0,
-          "length": 3.033333333333333,
+          "length": 2.433333333333333,
           "volume": 1
         },
         {
           "uuid": 4,
           "type": "scene",
           "path": "Square",
-          "offset": 20.6,
+          "offset": 20,
           "start": 0,
           "length": 2,
           "volume": 1
@@ -128,9 +128,9 @@
           "uuid": 13,
           "type": "audio",
           "path": "the_quick_brown_fox.wav",
-          "offset": 3.566666666666667,
-          "start": 0.13333333333333333,
-          "length": 3.1666666666666665,
+          "offset": 4.966666666666667,
+          "start": 0.36666666666666664,
+          "length": 2.933333333333333,
           "volume": 2.8
         }
       ],
@@ -141,7 +141,7 @@
           "path": "astronaut_rain.mp3",
           "offset": 0,
           "start": 29.333333333333332,
-          "length": 222.06666666666666,
+          "length": 221.23333333333332,
           "volume": 0.4
         }
       ],
@@ -150,9 +150,9 @@
           "uuid": 18,
           "type": "audio",
           "path": "astronaut_rain.mp3",
-          "offset": 30.933333333333334,
-          "start": 60.266666666666666,
-          "length": 33.8,
+          "offset": 7.133333333333334,
+          "start": 36.46666666666667,
+          "length": 7.433333333333334,
           "volume": 0.4
         }
       ]
@@ -161,24 +161,24 @@
       {
         "solo": false,
         "muted": false,
-        "locked": false
+        "locked": true
       },
       {
         "solo": false,
         "muted": false,
-        "locked": false
+        "locked": true
       },
       {
         "solo": false,
         "muted": false,
-        "locked": false
+        "locked": true
       },
       {
         "solo": false,
         "muted": false,
-        "locked": false
+        "locked": true
       }
     ],
-    "targetTrack": 3
+    "targetTrack": 1
   }
 }

@@ -5,9 +5,8 @@
 
   --clip-gap: 4px;
 
-  top: 0;
-  position: absolute;
-
+  grid-area: 1 / 1 / 2 / 2;
+  pointer-events: none;
 	padding-left: calc(var(--clip-gap) / 2);
   padding-right: calc(var(--clip-gap) / 2);
   &:first-child { padding-left: calc(var(--clip-gap)); }
@@ -22,6 +21,7 @@
     right: 0;
     top: -4px;
     bottom: -4px;
+    pointer-events: auto;
 
     .drop_target {
       z-index: 1000;
@@ -115,16 +115,16 @@
   // }
 
 
-  &:not(.add_source):hover {
+  &:not(.add_source) .clip_wrapper:hover {
     z-index: 100;
 
-    > .clip_wrapper > .label::before {
+    > .clip_inner > .label::before {
       background-color: var(--theme);
       font-weight: bold;
       color: var(--surface-color);
     }
 
-    > .clip_wrapper > .label_backdrop {
+    > .clip_inner > .label_backdrop {
       background-color: var(--theme-overlay);
     }
 
@@ -137,13 +137,14 @@
     position: relative;
     cursor: grab;
     height: 100%;
+    pointer-events: auto;
 
     &:active {
       cursor: grabbing;
     }
 
     .clip_inner {
-      overflow: hidden;
+      // overflow: hidden;
       height: 100%;
 			background-color: var(--surface-color-hover);
 			border-radius: var(--radius);
@@ -152,12 +153,21 @@
 
 
     .clip_container {
-      width: calc(100% - 16px);
+      --label-padding: 16px;
+      --label-buffer: 512px;
+      --label-fade-dist: 32px;
+
+      pointer-events: none;
+      width: calc(100% + var(--label-buffer));
+      mask-image: linear-gradient(to right,
+        black 0px,
+        black calc(100% - var(--label-buffer) - var(--label-fade-dist) - var(--label-padding)),
+        transparent calc(100% - var(--label-buffer) - var(--label-padding)));
       height: 100%;
-      margin-left: 8px;
-      overflow: hidden;
       display: flex;
+      margin-left: 8px;
       align-items: center;
+      will-change: transform;
 
       // .clip_label {
       //   display: grid;
@@ -216,6 +226,7 @@
 	position: absolute;
 	height: 32px;
 	padding: 2px;
+  top: 100%;
 	cursor: pointer;
 	z-index: 5;
 
@@ -250,6 +261,7 @@
 	box-sizing: content-box;
 	position: absolute;
 	height: 24px;
+  top: 100%;
 	margin-top: 4px;
 	margin-left: 4px;
 	padding-right: 24px;
@@ -266,12 +278,12 @@
 
 .clip_label {
   display: flex;
-  position: relative;
-  z-index: 10;
   gap: 6px;
-  overflow: hidden;
-  max-width: 100%;
-  mask-image: linear-gradient(to right, black 0px, black calc(100% - 32px), transparent calc(100%));
+  width: max-content;
+  position: sticky;
+  left: 12px;
+  z-index: 10;
+  width: max-content;
 
   svg {
     width: 16px;
@@ -281,10 +293,9 @@
   }
 
   .name {
+    margin: 0;
     flex-grow: 1;
     overflow: hidden;
-    width: 1000px;
-    margin: 0;
     white-space: nowrap;
 
     .source {
@@ -299,33 +310,51 @@
   }
 }
 
-
 .audio_clip {
   height: 32px;
+  --color: var(--theme);
+  --background: color-mix(in oklab, var(--theme) 17%, var(--background-color-dark));
 
   .clip_wrapper {
     .clip_inner {
-      background-color: color-mix(in oklab, var(--theme) 17%, var(--background-color-dark));
+      background-color: var(--background);
     }
   }
 
-  .audio_waveform {
-    padding: 4px;
-    fill: color-mix(in oklab, var(--theme) 20%, transparent);
+  .waveform {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 0;
+    z-index: 0;
+    opacity: 0.2;
+    pointer-events: none;
   }
 
   .name {
     color: color-mix(in oklab, var(--theme) 40%, white) !important;
-    text-shadow: 0px 0px 12px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
-    0px 0px 4px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
-    0px 0px 8px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
-    0px 0px 16px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark)),
-    0px 0px 24px color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
+    text-shadow:
+      0px 0px 8px var(--background),
+      // 0px 0px 8px var(--background),
+      // 0px 0px 8px var(--background),
+      // 0px 0px 8px var(--background),
+      0px 0px 10px var(--background),
+      0px 0px 12px var(--background),
+      0px 0px 14px var(--background),
+      0px 0px 16px var(--background);
     // font-weight: bold;
     // background-color: color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
     // padding: 6px 12px 6px 0px !important;
     // display: block;
     z-index: 20;
+  }
+
+  .clip_label {
+    transition: opacity 0.35s;
+  }
+
+  &:hover .clip_label {
+    opacity: 0;
   }
 
   svg {

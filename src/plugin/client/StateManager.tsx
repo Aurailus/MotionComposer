@@ -10,12 +10,12 @@ import { addEventListener, ensure } from './Util';
 import { useSignalish } from './Signalish';
 import { Clip, ClipSource, PluginSettings, Track } from './Types';
 import { getUUIDNext, setUUIDNext, useShortcut, useStore } from './Hooks';
-import { ClipsContext, CurrentClipContext, UIContext, ShortcutsContext, TracksContext } from './Contexts';
+import { ClipsContext, CurrentClipContext, UIContext, ShortcutsContext, TracksContext, AudioContext } from './Contexts';
 import { getSources, updateSceneSources, useSources } from './Sources';
 import { setVideo } from './scenes/VideoClipScene';
 import { setImage } from './scenes/ImageClipScene';
 import { ShortcutModule } from './shortcut/ShortcutMappings';
-import { AudioCache } from './audio/AudioController';
+import AudioController from './audio/AudioController';
 import AudioProxy from './audio/AudioProxy';
 
 function metaPluginSettings(meta: ProjectMetadata) {
@@ -35,7 +35,7 @@ export default function StateManager({ children }: { children: ComponentChildren
   const scenes = useScenes();
 	useEffect(() => updateSceneSources(scenes), [ scenes ]);
 	const sources = useSources();
-	const audio = useMemo(() => new AudioCache(), []);
+	const audio = useMemo(() => new AudioController(), []);
 
 	const { project, player } = useApplication();
 	const settings = useMemo(() => {
@@ -456,6 +456,8 @@ export default function StateManager({ children }: { children: ComponentChildren
 
 	const currentClipContextData = useMemo(() => ({ clip }), []);
 
+	const audioContextData = useMemo(() => ({ audio }), []);
+
 	const shortcutsContextData = useMemo(() => ({
 		currentModule: shortcutModule[0], setCurrentModule: shortcutModule[1] }), [ shortcutModule ]);
 
@@ -465,7 +467,9 @@ export default function StateManager({ children }: { children: ComponentChildren
 				<ClipsContext.Provider value={clipsContextData}>
 					<CurrentClipContext.Provider value={currentClipContextData}>
 						<ShortcutsContext.Provider value={shortcutsContextData}>
-							{children}
+							<AudioContext.Provider value={audioContextData}>
+								{children}
+							</AudioContext.Provider>
 						</ShortcutsContext.Provider>
 					</CurrentClipContext.Provider>
 				</ClipsContext.Provider>

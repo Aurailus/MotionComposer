@@ -1,9 +1,11 @@
-import { AudioData } from "@motion-canvas/core";
-import { Clip, Track } from "../Types";
+import { signal, Signal } from '@preact/signals';
+import { AudioData } from '@motion-canvas/core';
+
+import { Clip, ClipSource, Track } from '../Types';
 
 export const BUFFER_QUEUE_LOOKAHEAD = 200;
 
-export class AudioCache {
+export default class AudioController {
 	private context: AudioContext;
 
 	private volume: number = 1;
@@ -12,7 +14,7 @@ export class AudioCache {
 	// private tracks: Track[] = [];
 	private audibleTracks: boolean[];
 
-	private data = new Map<string, AudioData>;
+	private data = new Map<string, Signal<AudioData | null>>;
 	private buffers = new Map<string, AudioBuffer>;
 	private buffering = new Set<string>();
 
@@ -36,13 +38,9 @@ export class AudioCache {
 	async setClips(allClips: Clip[]) {
 		this.clips = allClips.filter(clip => (clip.type === 'audio' || clip.type === 'video') && clip.cache.source);
 
-		console.time('caching clips');
-
 		for (const clip of this.clips) {
 			await this.cacheSource(clip.cache.source.name);
 		}
-
-		console.timeEnd('caching clips');
 	}
 
 	async setTracks(tracks: Track[]) {
@@ -105,6 +103,12 @@ export class AudioCache {
 		});
 	}
 
+	getWaveform(source: ClipSource) {
+		let data = this.data.get(source.name);
+		if (!data) this.data.set(source.name, data = signal(null));
+		return data;
+	}
+
 	private generateWaveform(audio: string) {
 		const buffer = this.buffers.get(audio);
 		if (!buffer) return;
@@ -142,11 +146,14 @@ export class AudioCache {
       }
     }
 
-		this.data.set(audio, {
-      peaks,
-      absoluteMax,
-      length: samples,
-      sampleRate: (buffer.sampleRate / sampleSize) * 2,
-    });
+		let data = this.data.get(audio);
+		if (!data) this.data.set(audio, data = signal(null));
+		data.value = {
+			peaks,
+			absoluteMax,
+			length: samples,
+			sampleRate: buffer.sampleRate / sampleSize,
+		};
+		return data;
 	}
 }

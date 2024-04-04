@@ -1,6 +1,6 @@
 .timeline {
 	background-color: var(--background-color);
-	overflow: hidden;
+	overflow: visible;
   position: relative;
 	display: grid;
   height: 100%;
@@ -60,7 +60,8 @@
 }
 
 .timeline_track {
-  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
 
   &.clips_track {
     height: 76px;

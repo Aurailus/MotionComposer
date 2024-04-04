@@ -1,18 +1,110 @@
 /* @jsxImportSource preact */
 
+import { useLayoutEffect, useState, useContext, useRef } from 'preact/hooks';
+
 import styles from './Clip.module.scss';
 
 import * as Icon from '../../icon';
+import { useAudio } from '../../Contexts';
 import Clip, { ClipChildProps } from './Clip';
+import { TimelineContext } from '../TimelineContext';
+import { useApplication } from '@motion-canvas/ui';
+import { Color } from '@motion-canvas/core';
+
+const CANVAS = document.createElement('canvas');
+const CTX = CANVAS.getContext('2d');
 
 export default function AudioClip({ clip, ...props }: ClipChildProps) {
+	const audio = useAudio();
+	const { player } = useApplication();
+	const waveform = audio.getWaveform(clip.cache.source).value;
+	const [ imgSrc, setImgSrc ] = useState<string>('');
+	const clipRef = useRef<HTMLDivElement>();
+
+	const {
+    viewLength,
+    firstVisibleFrame,
+    lastVisibleFrame,
+    density,
+    framesToPercents,
+    pixelsToFrames,
+		framesToPixels
+  } = useContext(TimelineContext);
+
+	useLayoutEffect(() => {
+    if (!waveform || !clipRef.current) return;
+
+		const clipBody = clipRef.current.children[0] as HTMLElement;
+		// const imageWidth = Math.min(clipBody.offsetWidth, viewLength);
+		const imageWidth = clipBody.offsetWidth;
+
+		CANVAS.width = imageWidth;
+		const HEIGHT = 16;
+		CANVAS.height = HEIGHT * 2;
+
+		console.log(imageWidth);
+
+    CTX.clearRect(0, 0, viewLength, HEIGHT * 2);
+		const color = getComputedStyle(clipRef.current).getPropertyValue('--color');
+		CTX.fillStyle = color;
+
+		const startSec = clip.start;
+		const startSample = startSec * waveform.sampleRate;
+		const numSamplesAcrossImage = player.status.framesToSeconds(pixelsToFrames(imageWidth)) * waveform.sampleRate;
+
+
+		// console.log(sampleStep);
+		const CHUNKINESS = 3;
+
+		const numSamples = Math.ceil(imageWidth / CHUNKINESS);
+		const sampleStep = numSamplesAcrossImage / numSamples;
+		console.log('image width: ', imageWidth, numSamples);
+
+    // const flooredStart = Math.floor(start);
+    // const padding = flooredStart - start;
+    // const length = end - start;
+		// const step = 1;
+		// const cellWidth = end - start;
+		// console.log(cellWidth);
+
+
+		// const step = Math.ceil(density);
+    for (let i = 0; i < numSamples; i++) {
+      // const offset = index - start;
+      const sample = Math.round(startSample + i * sampleStep);
+
+      // if (sample >= waveform.peaks.length) break;
+
+			// const min = Math.min(waveform.peaks[sample], waveform.peaks[sample + 1]) / waveform.absoluteMax * HEIGHT;
+			// const max = Math.max(waveform.peaks[sample], waveform.peaks[sample + 1]) / waveform.absoluteMax * HEIGHT;
+			const min = -Math.max(waveform.peaks[sample], waveform.peaks[sample + 1]) / waveform.absoluteMax * HEIGHT;
+			const max = Math.max(waveform.peaks[sample], waveform.peaks[sample + 1]) / waveform.absoluteMax * HEIGHT;
+
+			// const opacity = Math.abs(min) / HEIGHT;
+			// const fill = new Color(color).hex('rgb') + Math.min(Math.floor(opacity * 255), 255).toString(16);
+			// CTX.fillStyle = fill;
+			CTX.fillRect(i * CHUNKINESS, HEIGHT - Math.abs(min), CHUNKINESS - 1, Math.abs(min));
+			CTX.fillRect(i * CHUNKINESS, HEIGHT, CHUNKINESS - 1, Math.abs(max));
+			// CTX.fillRect(offset, HEIGHT - min, 2, -min + max);
+    }
+
+		setImgSrc(CANVAS.toDataURL());
+	}, [
+		waveform, density, clipRef.current, clip.start, clip.length
+	]);
+
+// )
+	const left = 0;
+	// const left = clip.cache.clipRange[0] - firstVisibleFrame;
+
 	return (
 		<Clip
 			{...props}
 			clip={clip}
 			class={styles.audio_clip}
-			labelChildren={
-				<div class={styles.clip_label}>
+			ref={clipRef}
+			stickyChildren={
+				<>
 					<Icon.Audio/>
 					<p className={styles.name}>
 						<span
@@ -20,13 +112,18 @@ export default function AudioClip({ clip, ...props }: ClipChildProps) {
 							onMouseDown={e => (e.preventDefault(), e.stopPropagation())}
 						>{clip.cache.source?.name ?? clip.path}</span>
 					</p>
-				</div>
+				</>
+			}
+			staticChildren={
+				<img
+					class={styles.waveform}
+					src={imgSrc}
+					style={{ left: framesToPixels(left) }}
+				/>
 			}
 		/>
 	);
 }
-
-
 
 // const CANVAS_WIDTH = 1024;
 // const CANVAS_HEIGHT = 24;

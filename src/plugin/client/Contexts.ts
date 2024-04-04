@@ -6,6 +6,7 @@ import { useContext, useState, useEffect } from 'preact/hooks';
 import { Signalish } from './Signalish';
 import { Clip, ClipSource, Track } from './Types';
 import { ShortcutModule } from './shortcut/ShortcutMappings';
+import AudioController from './audio/AudioController';
 
 /** Clips Context. */
 
@@ -37,6 +38,18 @@ export const TracksContext = createContext<TracksContextData>({} as any);
 
 export function useTracks() {
 	return useContext(TracksContext);
+}
+
+/** Audio Context. */
+
+export interface AudioContextData {
+	audio: AudioController;
+}
+
+export const AudioContext = createContext<AudioContextData>({} as any);
+
+export function useAudio() {
+	return useContext(AudioContext).audio;
 }
 
 /** UI Context. */

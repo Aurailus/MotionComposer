@@ -1,6 +1,7 @@
 /* @jsxImportSource preact */
 
 import clsx from 'clsx';
+import { forwardRef, RefObject } from 'preact/compat';
 import { ComponentChildren } from 'preact';
 import { useContext, useRef } from 'preact/hooks';
 import { useApplication } from '@motion-canvas/ui';
@@ -26,13 +27,13 @@ export interface ClipChildProps {
 }
 
 interface ClipProps extends ClipChildProps {
-	attachedChildren?: ComponentChildren;
-	labelChildren?: ComponentChildren;
+	staticChildren?: ComponentChildren;
+	stickyChildren?: ComponentChildren;
 
 	class?: string;
 }
 
-export default function Clip({ clip, ...props }: ClipProps) {
+export default forwardRef<HTMLDivElement, ClipProps>(function Clip({ clip, ...props }, ref) {
 	const { addSource: dragging } = useUIContext();
   const { player, meta } = useApplication();
   const { framesToPixels, pixelsToFrames, offset } = useContext(TimelineContext);
@@ -101,12 +102,13 @@ export default function Clip({ clip, ...props }: ClipProps) {
 
   return (
     <div
+			ref={ref}
       class={clsx(styles.clip, props.class,
 				croppedLeft && styles.cropped_left,
 				croppedRight && styles.cropped_right,
 				addSource.value && styles.add_source,
 			)}
-      style={{ width: `${width}px`, left: `${framesToPixels(clip.cache.clipRange[0])}px` }}
+      style={{ width: `${width}px`, marginLeft: `${framesToPixels(clip.cache.clipRange[0])}px` }}
     >
 			<div class={styles.clip_wrapper}>
 				<div
@@ -115,12 +117,10 @@ export default function Clip({ clip, ...props }: ClipProps) {
 					onPointerMove={handleMoveMove}
 					onPointerUp={handleMoveEnd}
 				>
+					{props.staticChildren}
+
 					<div className={styles.clip_container}>
-						<div className={styles.clip_label} style={{
-    					paddingLeft: `${Math.max(offset - framesToPixels(clip.cache.clipRange[0]), 0)}px`
-						}}>
-							{props.labelChildren}
-						</div>
+						<div className={styles.clip_label}>{props.stickyChildren}</div>
 					</div>
 
 					<div class={clsx(styles.clip_drag, styles.left, croppedLeft && styles.can_extend)}
@@ -134,8 +134,6 @@ export default function Clip({ clip, ...props }: ClipProps) {
 						onPointerUp={handleResizeEnd}
 					/>
 	      </div>
-
-				{props.attachedChildren}
 			</div>
 
 			{addSource.value && <div class={clsx(styles.drop_targets)}>
@@ -149,7 +147,7 @@ export default function Clip({ clip, ...props }: ClipProps) {
 			</div>}
     </div>
   );
-}
+});
 
 export { default as SceneClip } from './SceneClip';
 export { default as ImageClip } from './ImageClip';

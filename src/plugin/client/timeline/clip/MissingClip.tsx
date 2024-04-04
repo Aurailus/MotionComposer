@@ -11,8 +11,8 @@ export default function MissingClip({ clip, ...props }: ClipChildProps) {
 			{...props}
 			clip={clip}
 			class={styles.missing_clip}
-			labelChildren={
-				<div class={styles.clip_label}>
+			stickyChildren={
+				<>
 					<Icon.Missing/>
 					<p className={styles.name}>
 						<span
@@ -20,7 +20,7 @@ export default function MissingClip({ clip, ...props }: ClipChildProps) {
 							onMouseDown={e => (e.preventDefault(), e.stopPropagation())}
 						>Missing '{clip.cache.source?.name ?? clip.path}'</span>
 					</p>
-				</div>
+				</>
 			}
 		/>
 	);
