@@ -1,19 +1,18 @@
 /* @jsxImportSource preact */
 
 import { Signal } from '@preact/signals';
-import { useContext } from 'preact/hooks';
 import { usePlayerState, usePlayerTime } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 
-import { TimelineContext } from './TimelineContext';
+import { useTimeline } from '../Contexts';
 
 interface PlayheadProps {
   seeking: Signal<number | null>;
 }
 
 export function Playhead({ seeking }: PlayheadProps) {
-  const { framesToPixels } = useContext(TimelineContext);
+  const { framesToPixels } = useTimeline();
   const { speed } = usePlayerState();
   const time = usePlayerTime();
 
@@ -21,7 +20,7 @@ export function Playhead({ seeking }: PlayheadProps) {
 
   return (
     <div
-      className={styles.playhead}
+      class={styles.playhead}
       data-frame={formatFrames(frame, speed)}
       style={{ left: `${framesToPixels(frame)}px` }}
     />

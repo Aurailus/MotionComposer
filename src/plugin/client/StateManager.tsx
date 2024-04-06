@@ -378,31 +378,27 @@ export default function StateManager({ children }: { children: ComponentChildren
 			}
 		}).bind(player.playback);
 
+		/** Compute the final frame count properly based on the clips. */
+		const oldPlaybackRecalculate = player.playback.recalculate.bind(player.playback);
+		(player.playback as any).recalculate = (async function() {
+			await oldPlaybackRecalculate();
+			const duration = clipsStore()?.[0]?.reduce((lastMax, clip) =>
+				Math.max(lastMax, clip.cache.clipRange[1]), 0) ?? 0;
+			if (duration === 0) return;
+			this.frame = duration;
+			this.duration = duration;
+			console.log('PLAYBACK MANAGER DURATION', this.duration)
+		}).bind(player.playback);
 
-		/* Augment Player.prepare() to set the right final duration. */
-		// hypothetically, it would be better to override PlaybackManager.recalculate() instead of Player.prepare(),
-		// but when I tried to do that I got funky results.
-
+		/* This override should not be necessary. Player:380 should automatically set the duration
+		 * to the playback manager's frame count. But it doesn't, and I don't want to figure out why. */
 		const oldPlayerPrepare = (player as any).prepare.bind(player);
-
 		(player as any).prepare = (async function() {
 			const playerState = await oldPlayerPrepare();
-			const duration = (clipsStore()?.[0]?.reduce((lastMax, clip) =>
-				Math.max(lastMax, clip.cache.clipRange[1]), 0) ?? 0);
-			this.duration.current = duration;
-			this.playback.duration = duration;
+			console.log('Setting duration to', this.playback.duration);
+			this.duration.current = this.playback.duration;
 			return playerState;
 		}).bind(player);
-
-		// const oldPlaybackRecalculate = player.playback.recalculate.bind(player.playback);
-		// (player.playback as any).recalculate = (async function() {
-		// 	await oldPlaybackRecalculate();
-		// 	const cache = clipsCache();
-		// 	const duration = clipsStore()?.[0]?.reduce((lastMax, clip) =>
-		// 		Math.max(lastMax, cache.get(clip).clipRange[1]), 0) ?? 0;
-		// 	this.duration = duration;
-		// 	console.log(this.duration);
-		// }).bind(player.playback);
 	}, []);
 
 

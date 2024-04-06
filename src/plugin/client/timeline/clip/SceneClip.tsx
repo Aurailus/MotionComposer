@@ -37,9 +37,9 @@ export default function SceneClip({ clip, ...props }: ClipChildProps) {
 			stickyChildren={
 				<>
 					<Icon.Scene/>
-					<p className={styles.name}>
+					<p class={styles.name}>
 						<span
-							className={styles.source}
+							class={styles.source}
 							onDblClick={handleGoToSource}
 							onMouseDown={e => (e.preventDefault(), e.stopPropagation())}
 						>{scene.name}</span>

@@ -4,9 +4,9 @@ import { Vector2 } from '@motion-canvas/core';
 import { useContext, useState, useEffect } from 'preact/hooks';
 
 import { Signalish } from './Signalish';
-import { Clip, ClipSource, Track } from './Types';
-import { ShortcutModule } from './shortcut/ShortcutMappings';
 import AudioController from './audio/AudioController';
+import { ShortcutModule } from './shortcut/ShortcutMappings';
+import { Clip, ClipSource, EditorMode, EditorTool, Track } from './Types';
 
 /** Clips Context. */
 
@@ -80,4 +80,43 @@ export const ShortcutsContext = createContext<ShortcutsContextData>({} as any);
 
 export function useShortcuts() {
   return useContext(ShortcutsContext);
+}
+
+/** Timeline Context */
+
+export interface TimelineContextData {
+  /** First visible frame */
+  firstFrame: number;
+
+  /** Last visible frame. */
+  lastFrame: number;
+
+  /** Frames per pixel rounded to the closest power of two. */
+  density: number;
+
+  /** View length in pixels. */
+  viewLength: number;
+
+  /** Scroll offset in pixels. */
+  viewOffset: number;
+
+  framesToPercents: (value: number) => number;
+  framesToPixels: (value: number) => number;
+  pixelsToFrames: (value: number) => number;
+  pointerToFrames: (value: number) => number;
+
+  tool: EditorTool;
+  setTool: (tool: EditorTool) => void;
+
+  mode: EditorMode;
+  setMode: (mode: EditorMode) => void;
+
+  snap: boolean;
+  setSnap: (snap: boolean) => void;
+}
+
+export const TimelineContext = createContext<TimelineContextData>({} as any);
+
+export function useTimeline() {
+	return useContext(TimelineContext);
 }

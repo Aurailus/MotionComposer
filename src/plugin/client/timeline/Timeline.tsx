@@ -1,26 +1,25 @@
 /* @jsxImportSource preact */
 
+import clsx from 'clsx';
 import { useSignal } from '@preact/signals';
-import { useLayoutEffect, useMemo, useRef, useContext, useEffect, useCallback } from 'preact/hooks';
-import { MouseButton, MouseMask, borderHighlight, clamp, labelClipDraggingLeftSignal, useApplication, useDuration, useKeyHold, usePlayerTime, usePreviewSettings, useScenes, useSharedSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
+import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
+import { MouseButton, MouseMask, borderHighlight, clamp, useApplication, useDuration, usePlayerTime, usePreviewSettings, useSharedSettings, useSize, useStateChange, useStorage } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 
 import Toolbar from './Toolbar';
 import { Playhead } from './Playhead';
-import { useClips, useTracks } from '../Contexts';
 import { Timestamps } from './Timestamps';
+import ScrubPreview from './ScrubPreview';
+import TimelineTrack from './TimelineTrack';
 import { RangeSelector } from './RangeSelector';
-import { useShortcut, useStore, useStoredState } from '../Hooks';
+import { useClips, useTracks } from '../Contexts';
+import TimelineTrackLabel from './TimelineTrackLabel';
 import * as Shortcut from '../shortcut/ShortcutMappings';
 import useShortcutHover from '../shortcut/useShortcutHover';
+import { useShortcut, useStore, useStoredState } from '../Hooks';
 import { Clip, EditorMode, EditorTool, copyClip } from '../Types';
-import { TimelineContext, TimelineContextData } from './TimelineContext';
-import { ImageClip, MissingClip, SceneClip, VideoClip } from './clip/Clip';
-import ScrubPreview from './ScrubPreview';
-import clsx from 'clsx';
-import TimelineTrack from './TimelineTrack';
-import TimelineTrackLabel from './TimelineTrackLabel';
+import { TimelineContext, TimelineContextData } from '../Contexts';
 
 const NUM_SNAP_FRAMES = 3;
 
@@ -39,8 +38,8 @@ const ZOOM_START_THRESHOLD = 48;
 export default function Timeline() {
 	const [ shortcutRef ] = useShortcutHover<HTMLDivElement>('timeline');
 
-	const [ scale, setScale ] = useStorage('timeline-scale', 1);
-	const [ offset, setOffset ] = useStorage('timeline-offset', 0);
+	const [ scale, setScale ] = useStorage('composer-scale', 1);
+	const [ viewOffset, setViewOffset ] = useStorage('composer-offset', 0);
 	const { range } = useSharedSettings();
 	const { fps } = usePreviewSettings();
 	const { player } = useApplication();
@@ -68,74 +67,57 @@ export default function Timeline() {
 	const isReady = duration > 0;
 
 	/** Set the initial scroll position once everything loads. */
-  useLayoutEffect(() => void(wrapperRef.current.scrollLeft = offset), [ rect.width > 0 && isReady ]);
+  useLayoutEffect(() => void(wrapperRef.current.scrollLeft = viewOffset), [ rect.width > 0 && isReady ]);
 
 	const sizes = useMemo(() => ({
-      viewLength: rect.width,
-      paddingLeft: 0,
-      fullLength: rect.width * scale + rect.width,
-      playableLength: rect.width * scale,
-    }),
-    [rect.width, scale],
-  );
+		viewLength: rect.width,
+		fullLength: rect.width * scale + rect.width,
+		visibleLength: rect.width * scale,
+  }), [rect.width, scale]);
 
   const zoomMax = (MAX_FRAME_SIZE / sizes.viewLength) * duration;
 
-  const conversion = useMemo(
-    () => ({
-      framesToPixels: (value: number) =>
-        (value / duration) * sizes.playableLength,
-      framesToPercents: (value: number) => (value / duration) * 100,
-      pixelsToFrames: (value: number) => (value / sizes.playableLength) * duration,
-    }),
-    [duration, sizes],
-  );
+  const conversion = useMemo(() => ({
+		framesToPixels: (value: number) => (value / duration) * sizes.visibleLength,
+		framesToPercents: (value: number) => (value / duration) * 100,
+		pixelsToFrames: (value: number) => (value / sizes.visibleLength) * duration,
+	}), [ duration, sizes ]);
 
-  const state = useMemo<TimelineContextData>(() => {
-    const density = Math.pow(2, Math.round(Math.log2(duration / sizes.playableLength)));
-    const segmentDensity = Math.floor(TIMESTAMP_SPACING * density);
-    const clampedSegmentDensity = Math.max(1, segmentDensity);
-    const relativeOffset = offset - sizes.paddingLeft;
-    const firstVisibleFrame = Math.floor(
-      conversion.pixelsToFrames(relativeOffset) / clampedSegmentDensity) * clampedSegmentDensity;
-    const lastVisibleFrame = Math.ceil(conversion.pixelsToFrames(
-			relativeOffset + sizes.viewLength + TIMESTAMP_SPACING) / clampedSegmentDensity) * clampedSegmentDensity;
-    const startPosition = sizes.paddingLeft + rect.x - offset;
+  const ctx = useMemo<TimelineContextData>(() => {
+    const density = Math.pow(2, Math.round(Math.log2(duration / sizes.visibleLength)));
+    const firstFrame = conversion.pixelsToFrames(viewOffset);
+    const lastFrame = conversion.pixelsToFrames(viewOffset + sizes.viewLength);
 
     return {
-      viewLength: sizes.viewLength,
-      offset: relativeOffset,
-      firstVisibleFrame,
-      lastVisibleFrame,
-      density,
-      segmentDensity,
-      pointerToFrames: (value: number) =>
-        conversion.pixelsToFrames(value - startPosition),
-      ...conversion,
-			tool,
-			setTool,
-			mode,
-			setMode,
-			snap,
-			setSnap
+			viewOffset,
+			firstFrame, lastFrame,
+			density,
+			...sizes,
+			...conversion,
+      pointerToFrames: (value: number) => conversion.pixelsToFrames(value - rect.x + viewOffset),
+			tool, setTool,
+			mode, setMode,
+			snap, setSnap
     };
-  }, [ sizes, conversion, duration, offset, tool, mode, snap ]);
+  }, [ sizes, conversion, viewOffset, duration, tool, mode, snap, rect.x ]);
 
-	useStateChange(([prevDuration, prevWidth]) => {
+	useStateChange(([ prevDuration, prevWidth ]) => {
       const newDuration = duration / fps;
       let newScale = scale;
-      if (prevDuration !== 0 && newDuration !== 0) {
-        newScale *= newDuration / prevDuration;
-      }
-      if (prevWidth !== 0 && rect.width !== 0) {
-        newScale *= prevWidth / rect.width;
-      }
-      if (!isNaN(newScale) && duration > 0) {
-        setScale(clamp(ZOOM_MIN, zoomMax, newScale));
-      }
+
+
+			if (prevDuration !== 0 && newDuration !== 0) newScale *= newDuration / prevDuration;
+			if (prevWidth !== 0 && rect.width !== 0) newScale *= prevWidth / rect.width;
+			if (!isNaN(newScale) && duration > 0) setScale(clamp(ZOOM_MIN, zoomMax, newScale));
     },
-    [duration / fps, rect.width],
+    [ duration / fps, rect.width ],
   );
+
+	const timestampDensity = Math.max(1, Math.floor(TIMESTAMP_SPACING * ctx.density));
+	const timestampFirstFrame = Math.floor(conversion.pixelsToFrames(
+		viewOffset) / timestampDensity) * timestampDensity;
+	const timestampLastFrame = Math.ceil(conversion.pixelsToFrames(
+		viewOffset + sizes.viewLength + TIMESTAMP_SPACING) / timestampDensity) * timestampDensity;
 
 	/** Shortcuts. */
 
@@ -178,12 +160,12 @@ export default function Timeline() {
 	}, []);
 
 	useLayoutEffect(() => {
-    wrapperRef.current.scrollLeft = offset;
+    wrapperRef.current.scrollLeft = viewOffset;
   }, [scale]);
 
 	/** Updates the offset for horizontal scrolling. */
 	const handleScroll = (evt: UIEvent) => {
-		setOffset((evt.target as HTMLElement).scrollLeft);
+		setViewOffset((evt.target as HTMLElement).scrollLeft);
 	};
 
 	/** Updates the scale of the timeline. */
@@ -209,20 +191,20 @@ export default function Timeline() {
 			return;
 		}
 
-		let pointer = offset - sizes.paddingLeft + evt.x - rect.x;
-		if (evt.x - rect.x < ZOOM_START_THRESHOLD) pointer = offset;
+		let pointer = viewOffset + evt.x - rect.x;
+		if (evt.x - rect.x < ZOOM_START_THRESHOLD) pointer = viewOffset;
 
 		const newTrackSize = rect.width * newScale * +rect.width;
 		const maxOffset = newTrackSize - rect.width;
-		const newOffset = clamp(0, maxOffset, offset - pointer + pointer * ratio);
+		const newOffset = clamp(0, maxOffset, viewOffset - pointer + pointer * ratio);
 
 		wrapperRef.current.scrollLeft = newOffset;
 		if (!isNaN(newScale)) setScale(newScale);
-		if (!isNaN(newOffset)) setOffset(newOffset);
+		if (!isNaN(newOffset)) setViewOffset(newOffset);
 	};
 
 	function scrub(pos: number) {
-    const frame = Math.round(state.pointerToFrames(pos));
+    const frame = Math.round(ctx.pointerToFrames(pos));
 		const minFrame = player.status.secondsToFrames(range[0]);
 		const maxFrame = Math.min(player.status.secondsToFrames(range[1]), duration);
 
@@ -258,10 +240,10 @@ export default function Timeline() {
 		else if (evt.buttons & MouseMask.Auxiliary) {
 			const newOffset = clamp(
 				0,
-				sizes.playableLength,
-				offset - evt.movementX,
+				sizes.visibleLength,
+				viewOffset - evt.movementX,
 			);
-			setOffset(newOffset);
+			setViewOffset(newOffset);
 			wrapperRef.current.scrollLeft = newOffset;
 		}
 	}
@@ -460,7 +442,7 @@ export default function Timeline() {
 	}
 
 	return (
-		<TimelineContext.Provider value={state}>
+		<TimelineContext.Provider value={ctx}>
 			<div class={styles.timeline}>
 				<Toolbar/>
 
@@ -493,12 +475,10 @@ export default function Timeline() {
 					>
 						<div
 							class={styles.timeline_content}
-							style={{
-								width: `${conversion.framesToPixels(duration)}px`,
-								left: `${sizes.paddingLeft}px` }}
+							style={{ width: `${conversion.framesToPixels(duration)}px` }}
 						>
 							<RangeSelector rangeRef={rangeRef}/>
-							<Timestamps/>
+							<Timestamps firstFrame={timestampFirstFrame} lastFrame={timestampLastFrame} density={timestampDensity}/>
 							<Playhead seeking={seeking}/>
 
 							<TimelineTrack

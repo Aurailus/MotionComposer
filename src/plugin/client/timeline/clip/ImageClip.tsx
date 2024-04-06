@@ -14,9 +14,9 @@ export default function ImageClip({ clip, ...props }: ClipChildProps) {
 			stickyChildren={
 				<>
 					<Icon.Image/>
-					<p className={styles.name}>
+					<p class={styles.name}>
 						<span
-							className={styles.source}
+							class={styles.source}
 							onMouseDown={e => (e.preventDefault(), e.stopPropagation())}
 						>{clip.cache.source.name ?? clip.path}</span>
 					</p>

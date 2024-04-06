@@ -1,13 +1,13 @@
 /* @jsxImportSource preact */
 
-import { useLayoutEffect, useState, useContext } from 'preact/hooks';
-import type { TimeEvent } from '@motion-canvas/core/lib/scenes/timeEvents';
+import { useLayoutEffect, useState } from 'preact/hooks';
+import { TimeEvent } from '@motion-canvas/core/lib/scenes/timeEvents';
 import { findAndOpenFirstUserFile, labelClipDraggingLeftSignal, useApplication } from '@motion-canvas/ui';
 
 import styles from './Clip.module.scss';
 
 import { Clip } from '../../Types';
-import { TimelineContext } from '../TimelineContext';
+import { useTimeline } from '../../Contexts';
 
 interface Props {
   clip: Clip;
@@ -16,7 +16,7 @@ interface Props {
 
 export default function EventLabel({ clip, event }: Props) {
   const { player } = useApplication();
-  const { framesToPixels, pixelsToFrames } = useContext(TimelineContext);
+  const { framesToPixels, pixelsToFrames } = useTimeline();
 
   // How long the event waits for before firing.
   const [ eventTime, setEventTime ] = useState(event.offset);
@@ -100,7 +100,7 @@ export default function EventLabel({ clip, event }: Props) {
       />
 
       <div
-        className={styles.label_backdrop}
+        class={styles.label_backdrop}
         style={{
           left: `${framesToPixels(player.status.secondsToFrames(
             event.initialTime - clip.start)) - 4}px`,

@@ -1,15 +1,14 @@
 /* @jsxImportSource preact */
 
-import { useContext } from 'preact/hooks';
 import { Button } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 
 import * as Icon from '../icon';
-import { TimelineContext } from './TimelineContext';
+import { useTimeline } from '../Contexts';
 
 export default function Toolbar() {
-	const ctx = useContext(TimelineContext);
+	const ctx = useTimeline();
 
 	return (
 		<div class={styles.toolbar}>

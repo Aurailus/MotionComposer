@@ -15,7 +15,7 @@ A (heavily WIP) plugin to add more video editing features to [Motion Canvas](htt
   - [ ] Selection
   - [ ] Infinite cropping for image scenes
 - [ ] Reconcile existing scenes when a clip is moved or resized to maintain proper ordering and data. Remove clips with 0 length.
-- [ ] Allow scenes to invoke audio tracks display waveform embedded in scene.
+- [ ] Allow scenes to invoke audio tracks, display waveform embedded in scene.
 - [ ] Allow modifying audio clip volume.
 - [x] Audio Clip Proxy
 - [x] Override playback to play in order.
@@ -25,13 +25,13 @@ A (heavily WIP) plugin to add more video editing features to [Motion Canvas](htt
   - [x] Check if modifying a scene fucks things up.
   - [x] Make sure having no scene works.
 - [x] Dummy scenes to display video and images.
-- [ ] FFMPEG exporter.
+- [ ] Video export.
 
 ## Stretch Goals
 
 - [ ] More advanced editor tools: scissor tool, etc.
 - [ ] Video stabilization and color grading.
-- [ ] Mute / Solo audio tracks.
+- [x] Mute / Solo audio tracks.
 - [ ] Color clips in the timeline.
 
 ## Project Structure

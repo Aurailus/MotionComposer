@@ -1,170 +1,162 @@
 /* @jsxImportSource preact */
 
+import clsx from 'clsx';
 import { useApplication } from '@motion-canvas/ui';
-import { useRef, useMemo, useContext, useState } from 'preact/hooks';
+import { useRef, useMemo, useEffect, useLayoutEffect } from 'preact/hooks';
+
+import styles from './Clip.module.scss';
 
 import { Clip } from '../../Types';
-import { TimelineContext } from '../TimelineContext';
+import { useTimeline } from '../../Contexts';
 import { AudioData } from '../../audio/AudioController';
+
+const CANVAS = document.createElement('canvas');
+const CTX = CANVAS.getContext('2d');
+
+const CHUNKINESS = 3;
+const OVERFLOW = 256;
+const WAVEFORM_AMP = 6;
+const WAVEFORM_EXP = 1.7;
+const BLANK_IMG_SRC = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 
 interface Props {
 	clip: Clip;
 	audio: AudioData;
-	width: number;
 	height: number;
 }
 
-export default function Waveform({ audio, clip, width, height }: Props) {
+export default function Waveform({ audio, clip, height }: Props) {
 	const { player } = useApplication();
-  const clipRef = useRef<HTMLDivElement>();
 
   const imgRef = useRef<HTMLImageElement>();
-	const imgSrc = useRef<string>('');
+	const imgSrc = useRef<string>(BLANK_IMG_SRC);
   const imgLeft = useRef<number>(0);
+	const imgWidth = useRef<number>(0);
 
   const {
-    firstVisibleFrame: viewStartFrame,
-    lastVisibleFrame: viewEndFrame,
-    pixelsToFrames,
+    firstFrame: viewFirstFrame,
+    lastFrame: viewLastFrame,
+    density,
     framesToPixels,
-  } = useContext(TimelineContext);
+    pixelsToFrames
+  } = useTimeline();
 
-  const lastWaveformProps = useRef<[number, number, number, number]>([
-    0, 0, 0, 0,
-  ]);
+  const lastWaveformProps = useRef<[number, number, number, number]>([ 0, 0, 0, 0 ]);
   const recomputeOffset = useMemo(() => clip.uuid % OVERFLOW, [clip.uuid]);
-  const [viewFirstPx, viewLastPx] = useMemo(
-    () => [
-      Math.floor(
-        (framesToPixels(viewStartFrame) + recomputeOffset) / OVERFLOW
-      ) *
-        OVERFLOW -
-        recomputeOffset,
-      Math.ceil((framesToPixels(viewEndFrame) + recomputeOffset) / OVERFLOW) *
-        OVERFLOW -
-        recomputeOffset,
-    ],
-    [viewStartFrame, framesToPixels, recomputeOffset]
-  );
+
+	const [ viewFirstPx, viewLastPx ] = useMemo(() => [
+    Math.floor((framesToPixels(viewFirstFrame) + recomputeOffset) / OVERFLOW) * OVERFLOW - recomputeOffset,
+    Math.ceil((framesToPixels(viewLastFrame) + recomputeOffset) / OVERFLOW) * OVERFLOW - recomputeOffset,
+  ], [ viewFirstFrame, framesToPixels, recomputeOffset ]);
+
 
   useLayoutEffect(() => {
-    if (!audioData || !clipRef.current) return;
+    if (!audio) return;
 
-    let clipFirstPx =
-      Math.floor(
-        (framesToPixels(clip.cache.clipRange[0]) + recomputeOffset) / OVERFLOW
-      ) *
-        OVERFLOW -
-      recomputeOffset;
-    let clipLastPx =
-      Math.ceil(
-        (framesToPixels(clip.cache.clipRange[1]) + recomputeOffset) / OVERFLOW
-      ) *
-        OVERFLOW -
-      recomputeOffset;
+    const rawClipLeftPx = framesToPixels(clip.cache.clipRange[0]);
+    const rawClipRightPx = framesToPixels(clip.cache.clipRange[1]);
 
-    const parentBoundingRect =
-      clipRef.current.parentElement.getBoundingClientRect();
-    const clipBoundingRect =
-      clipRef.current.children[0].children[0].getBoundingClientRect();
-    const clipLeftPx = clipBoundingRect.left - parentBoundingRect.left;
-    const clipRightPx = clipBoundingRect.right - parentBoundingRect.left;
+    if (rawClipRightPx < viewFirstPx || rawClipLeftPx > viewLastPx) return;
 
-    let croppedFirstPx = clamp(
-      viewFirstPx,
-      viewLastPx,
-      Math.max(clipFirstPx, clipLeftPx)
-    );
-    let croppedLastPx = clamp(
-      viewFirstPx,
-      viewLastPx,
-      Math.min(clipLastPx, clipRightPx)
-    );
-    const lengthPx = croppedLastPx - croppedFirstPx;
-    const viewLengthFrames = viewEndFrame - viewStartFrame;
+    const imgFirstPx = Math.max(viewFirstPx, rawClipLeftPx);
+    const imgLastPx = Math.min(viewLastPx, rawClipRightPx);
+    const imgWidthPx = Math.ceil(imgLastPx - imgFirstPx);
 
-    if (
-      lastWaveformProps.current[0] === croppedFirstPx &&
-      lastWaveformProps.current[1] === croppedLastPx &&
-      lastWaveformProps.current[2] === lengthPx &&
-      lastWaveformProps.current[3] === viewLengthFrames
-    )
+    if (!imgWidthPx) {
+      imgSrc.current = BLANK_IMG_SRC;
+      if (imgRef.current) imgRef.current.src = BLANK_IMG_SRC;
       return;
-    lastWaveformProps.current = [
-      croppedFirstPx,
-      croppedLastPx,
-      lengthPx,
-      viewLengthFrames,
-    ];
-    if (!lengthPx) return;
+    }
 
-    // Okay, finally we've gotten to where we make the image.
+    const drawFirstPx = Math.floor(imgFirstPx / CHUNKINESS) * CHUNKINESS;
+    const drawLastPx = Math.ceil(imgLastPx / CHUNKINESS) * CHUNKINESS;
+    const drawWidth = drawLastPx - drawFirstPx;
+    const drawInsetPx = Math.max(0, drawFirstPx - rawClipLeftPx);
 
-    CANVAS.width = lengthPx;
-    const HEIGHT = 16;
-    CANVAS.height = HEIGHT * 2;
+    const drawFirstFrame = pixelsToFrames(drawInsetPx) + clip.cache.startFrames;
+    const drawLastFrame = pixelsToFrames(drawWidth) + drawFirstFrame;
+    const drawLengthFrames = drawLastFrame - drawFirstFrame;
 
-    CTX.clearRect(0, 0, lengthPx, HEIGHT * 2);
-    const color = getComputedStyle(clipRef.current).getPropertyValue('--color');
-    CTX.fillStyle = color;
+    if (lastWaveformProps.current[0] === imgFirstPx &&
+      lastWaveformProps.current[1] === imgLastPx &&
+      lastWaveformProps.current[2] === drawWidth &&
+      lastWaveformProps.current[3] === drawLengthFrames) return;
 
-    const startSec =
-      player.status.framesToSeconds(
-        pixelsToFrames(croppedFirstPx - clip.cache.clipRange[0])
-      ) + clip.start;
-    const endSec =
-      player.status.framesToSeconds(
-        pixelsToFrames(croppedLastPx - clip.cache.clipRange[0])
-      ) + clip.start;
+    lastWaveformProps.current = [ imgFirstPx, imgLastPx, drawWidth, drawLengthFrames ];
+
+    CANVAS.width = imgWidthPx;
+    CANVAS.height = height;
+
+    CTX.clearRect(0, 0, imgWidthPx, height);
+    CTX.fillStyle = getComputedStyle(imgRef.current).getPropertyValue('--color');
+
+    const startSec = player.status.framesToSeconds(drawFirstFrame);
+    const endSec = player.status.framesToSeconds(drawLastFrame);
+    const lenSecs = endSec - startSec;
+
+    const pixelsPerFrame = 1/density;
 
     let waveformInd = 0;
-    const numChunks = Math.ceil(lengthPx / CHUNKINESS);
     while (true) {
-      const waveform = audioData.peaks[waveformInd];
-      const numSamples = (endSec - startSec) * waveform.sampleRate;
-      const sampleStep = numSamples / numChunks;
-      if (sampleStep <= 4 || waveformInd === audioData.peaks.length - 1) break;
+      const waveform = audio.peaks[waveformInd];
+      const samplesPerFrame = waveform.sampleRate / 30;
+      if (samplesPerFrame / pixelsPerFrame < 2 || waveformInd === audio.peaks.length - 1) break;
       waveformInd++;
     }
 
-    const waveform = audioData.peaks[waveformInd];
-    const numSamples = (endSec - startSec) * waveform.sampleRate;
+    const numChunks = Math.ceil(drawWidth / CHUNKINESS);
+    const waveform = audio.peaks[waveformInd];
+    const numSamples = (lenSecs) * waveform.sampleRate;
     const sampleStep = numSamples / numChunks;
     const startSample = startSec * waveform.sampleRate;
 
+    const startOffsetPx = drawFirstPx - imgFirstPx;
+
     for (let i = 0; i < numChunks; i++) {
       let amp = 0;
-      const numSamples =
-        Math.ceil(startSample + (i + 1) * sampleStep) -
-        Math.floor(startSample + i * sampleStep);
-      for (
-        let j = Math.floor(startSample + i * sampleStep);
-        j < Math.ceil(startSample + (i + 1) * sampleStep);
-        j++
-      )
+      const numSamples = Math.ceil(startSample + (i + 1) * sampleStep) - Math.floor(startSample + i * sampleStep);
+      for (let j = Math.floor(startSample + i * sampleStep); j < Math.ceil(startSample + (i + 1) * sampleStep); j++)
         amp += waveform.peaks[j] / 0xffff;
       amp /= numSamples;
       amp = Math.pow(amp, WAVEFORM_EXP);
-      amp *= audioData.absoluteMax * clip.volume * WAVEFORM_AMP * HEIGHT;
+      amp *= audio.absoluteMax * clip.volume * WAVEFORM_AMP * height / 2;
 
-      // TODO: collapse into one fillRect function
-      CTX.fillRect(
-        i * CHUNKINESS,
-        HEIGHT - Math.abs(amp),
+      CTX.rect(
+        i * CHUNKINESS + startOffsetPx,
+        height / 2 - Math.abs(amp),
         CHUNKINESS - 1,
-        Math.abs(amp)
+        Math.abs(amp) * 2
       );
-      CTX.fillRect(i * CHUNKINESS, HEIGHT, CHUNKINESS - 1, Math.abs(amp));
     }
 
-    setImgSrc(CANVAS.toDataURL());
-    setImgLeft(croppedFirstPx - clipLeftPx);
+    CTX.fill();
+
+    imgSrc.current = CANVAS.toDataURL();
+    imgLeft.current = imgFirstPx - rawClipLeftPx;
+    imgWidth.current = imgWidthPx;
+
+		if (imgRef.current) {
+			imgRef.current.src = imgSrc.current;
+			imgRef.current.style.left = `${imgLeft.current}px`;
+			imgRef.current.style.width = `${imgWidth.current}px`;
+		}
   }, [
+    clip.cache.clipRange[0],
+    clip.cache.clipRange[1],
     viewFirstPx,
     viewLastPx,
-    Math.round(viewStartFrame - viewEndFrame),
     framesToPixels,
-    audioData,
-    clipRef.current,
+    pixelsToFrames,
+    audio,
+		imgRef.current
   ]);
+
+	return (
+		<div class={styles.hide_overflow}>
+			<div class={clsx(styles.invert_gap, styles.relative)}>
+				<img ref={imgRef} class={styles.waveform} src={imgSrc.current}
+					style={{ left: `${imgLeft.current}px`, width: `${imgWidth.current}px` }} />
+			</div>
+		</div>
+	)
 }

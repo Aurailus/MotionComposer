@@ -1,13 +1,13 @@
 /* @jsxImportSource preact */
 
 import { RefObject } from 'preact/compat';
-import { useRef, useEffect, useContext, useCallback } from 'preact/hooks';
-import { useApplication, useDocumentEvent, useDuration, usePreviewSettings, useSharedSettings, useSize, useStateChange } from '@motion-canvas/ui';
+import { useRef, useEffect, useCallback } from 'preact/hooks';
+import { useApplication, useDocumentEvent, useDuration, usePreviewSettings, useSharedSettings } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 
 import { useShortcut } from '../Hooks';
-import { TimelineContext } from './TimelineContext';
+import { useTimeline } from '../Contexts';
 import * as Shortcut from '../shortcut/ShortcutMappings';
 
 interface Props {
@@ -18,11 +18,11 @@ interface Props {
 }
 
 export default function ScrubPreview(props: Props) {
-	const { range } = useSharedSettings();
 	const duration = useDuration();
 	const { fps } = usePreviewSettings();
+	const { range } = useSharedSettings();
 	const { meta, player } = useApplication();
-	const { pointerToFrames, framesToPixels } = useContext(TimelineContext);
+	const { pointerToFrames, framesToPixels } = useTimeline();
 
 	const ref = useRef<HTMLDivElement>();
 	const frame = useRef(0);

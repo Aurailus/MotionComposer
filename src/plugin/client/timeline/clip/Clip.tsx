@@ -1,9 +1,9 @@
 /* @jsxImportSource preact */
 
 import clsx from 'clsx';
-import { forwardRef, RefObject } from 'preact/compat';
+import { useRef } from 'preact/hooks';
+import { forwardRef } from 'preact/compat';
 import { ComponentChildren } from 'preact';
-import { useContext, useRef } from 'preact/hooks';
 import { useApplication } from '@motion-canvas/ui';
 
 import styles from './Clip.module.scss';
@@ -14,8 +14,7 @@ import VideoClip from './VideoClip';
 import AudioClip from './AudioClip';
 import MissingClip from './MissingClip';
 import { Clip, ClipType } from '../../Types';
-import { useUIContext } from '../../Contexts';
-import { TimelineContext } from '../TimelineContext';
+import { useTimeline, useUIContext } from '../../Contexts';
 
 export interface ClipChildProps {
 	clip: Clip;
@@ -36,7 +35,7 @@ interface ClipProps extends ClipChildProps {
 export default forwardRef<HTMLDivElement, ClipProps>(function Clip({ clip, ...props }, ref) {
 	const { addSource: dragging } = useUIContext();
   const { player, meta } = useApplication();
-  const { framesToPixels, pixelsToFrames, offset } = useContext(TimelineContext);
+  const { framesToPixels, pixelsToFrames } = useTimeline();
 	const { addSource } = useUIContext();
 
 	const moveSide = useRef<'left' | 'right'>('left');
@@ -119,8 +118,8 @@ export default forwardRef<HTMLDivElement, ClipProps>(function Clip({ clip, ...pr
 				>
 					{props.staticChildren}
 
-					<div className={styles.clip_container}>
-						<div className={styles.clip_label}>{props.stickyChildren}</div>
+					<div class={styles.clip_container}>
+						<div class={styles.clip_label}>{props.stickyChildren}</div>
 					</div>
 
 					<div class={clsx(styles.clip_drag, styles.left, croppedLeft && styles.can_extend)}

@@ -168,8 +168,6 @@ export default class AudioController {
 			peaks.push({ peaks: newPeaks, sampleRate: last.sampleRate / 2 });
 		}
 
-		console.log('Generated waveform for', audio, 'with', peaks.length, 'peaks graphs');
-
 		let data = this.data.get(audio);
 		if (!data) this.data.set(audio, data = signal(null));
 		data.value = {

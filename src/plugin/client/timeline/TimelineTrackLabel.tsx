@@ -1,6 +1,7 @@
 /* @jsxImportSource preact */
 
-import { Button } from '@motion-canvas/ui';
+import { Button as ButtonElem } from '@motion-canvas/ui';
+const Button = ButtonElem as any;
 
 import styles from './Timeline.module.scss';
 

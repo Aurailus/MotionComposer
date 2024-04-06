@@ -1,232 +1,214 @@
 .clip {
-  --crop-left-url: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='6.4805' height='158.46' version='1.1' viewBox='0 0 1.7227 41.596' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m1.7227-0.26337v42.123h-1.7227l1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3182-1.2362-1.2362h-0.092935l0.046727-0.04621-0.046727-0.04673h0.092935l1.2362-1.2341-1.3177-1.3182 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3052-1.3052h-0.023883l0.011941-0.01194-0.011941-0.01194h0.023883l1.3052-1.3032-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3182 1.3177-1.3177-1.2346-1.2346h-0.094492l0.047246-0.04725-0.047246-0.04725h0.094492l1.2346-1.2325-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291 1.3291-1.327-1.3177-1.3177 1.3177-1.3177-1.3291-1.3291z'/%3E%3C/svg%3E%0A");
+	--clip-gap: 4px;
+	--clip-pad-left: calc(var(--clip-gap) / 2);
+	&:first-child { --clip-pad-left: calc(var(--clip-gap)); }
+	--clip-pad-right: calc(var(--clip-gap) / 2);
+	&:last-child { --clip-pad-right: calc(var(--clip-gap)); }
 
-  --crop-right-url: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='6.4805' height='158.46' version='1.1' viewBox='0 0 1.7227 41.596' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m0-1.5925v42.123h1.7227l-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3182 1.2362-1.2362h0.092935l-0.046727-0.04621 0.046727-0.04673h-0.092935l-1.2362-1.2341 1.3177-1.3182-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3052-1.3052h0.023883l-0.011941-0.01194 0.011941-0.01194h-0.023883l-1.3052-1.3032 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3182-1.3177-1.3177 1.2346-1.2346h0.094492l-0.047246-0.04725 0.047246-0.04725h-0.094492l-1.2346-1.2325 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291-1.3291-1.327 1.3177-1.3177-1.3177-1.3177 1.3291-1.3291z'/%3E%3C/svg%3E%0A");
+	grid-area: 1 / 1 / 2 / 2;
+	pointer-events: none;
+	padding-left: var(--clip-pad-left);
+	padding-right: var(--clip-pad-right);
 
-  --clip-gap: 4px;
+	.hide_overflow {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		inset: 0;
+		margin-bottom: -100%;
+		border-radius: 4px;
+		overflow: hidden;
+	}
 
-  grid-area: 1 / 1 / 2 / 2;
-  pointer-events: none;
-	padding-left: calc(var(--clip-gap) / 2);
-  padding-right: calc(var(--clip-gap) / 2);
-  &:first-child { padding-left: calc(var(--clip-gap)); }
-  &:last-child { padding-right: calc(var(--clip-gap)); }
+	.invert_gap {
+		margin-left: calc(-1 * var(--clip-pad-left));
+		margin-right: calc(-1 * var(--clip-pad-right));
+		width: calc(100% + var(--clip-pad-left) + var(--clip-pad-right));
+		height: 100%;
+	}
 
-  .drop_targets {
-    --target-max-width: 12px;
+	.relative {
+		position: relative;
+	}
 
-    display: flex;
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: -4px;
-    bottom: -4px;
-    pointer-events: auto;
+	.drop_targets {
+		--target-max-width: 12px;
 
-    .drop_target {
-      z-index: 1000;
-      opacity: 0.3;
+		display: flex;
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: -4px;
+		bottom: -4px;
+		pointer-events: auto;
 
-      &:hover { opacity: 1; }
+		.drop_target {
+			z-index: 1000;
+			opacity: 0.3;
 
-      &.left, &.right {
-        max-width: var(--target-max-width);
-        flex-grow: 1.5;
+			&:hover { opacity: 1; }
 
-        &::after {
-          content: ' ';
-          position: absolute;
-          height: calc(100% - 8px);
-          width: 2px;
-          background-color: var(--theme);
-          z-index: 10000;
-          top: 4px;
-          opacity: 0;
-          border-radius: 4px;
-          pointer-events: none;
-        }
+			&.left, &.right {
+				max-width: var(--target-max-width);
+				flex-grow: 1.5;
 
-        &:hover::after {
-          opacity: 0.6;
-        }
+				&::after {
+					content: ' ';
+					position: absolute;
+					height: calc(100% - 8px);
+					width: 2px;
+					background-color: var(--theme);
+					z-index: 10000;
+					top: 4px;
+					opacity: 0;
+					border-radius: 4px;
+					pointer-events: none;
+				}
 
-        &.left::after {
-          left: -1px;
-        }
+				&:hover::after {
+					opacity: 0.6;
+				}
 
-        &.right::after {
-          right: -1px;
-        }
-      }
+				&.left::after {
+					left: -1px;
+				}
 
-      &.replace {
-        flex-grow: 1;
+				&.right::after {
+					right: -1px;
+				}
+			}
 
-        &::after {
-          content: ' ';
-          position: absolute;
-          height: calc(100% - 8px);
-          width: calc(100% - 8px);
-          border: 2px solid var(--theme);
-          z-index: 10000;
-          box-sizing: border-box;
-          top: 4px;
-          left: 4px;
-          opacity: 0;
-          border-radius: 4px;
-          pointer-events: none;
-        }
+			&.replace {
+				flex-grow: 1;
 
-        &:hover::after {
-          opacity: 0.6;
-        }
-      }
-    }
-  }
+				&::after {
+					content: ' ';
+					position: absolute;
+					height: calc(100% - 8px);
+					width: calc(100% - 8px);
+					border: 2px solid var(--theme);
+					z-index: 10000;
+					box-sizing: border-box;
+					top: 4px;
+					left: 4px;
+					opacity: 0;
+					border-radius: 4px;
+					pointer-events: none;
+				}
 
+				&:hover::after {
+					opacity: 0.6;
+				}
+			}
+		}
+	}
 
-  // &.cropped_left {
-  //   padding-left: 1px;
-  //   .container { padding-left: 4px; }
+	&:not(.add_source) .clip_wrapper:hover {
+		z-index: 100;
 
-  //   .clip_inner {
-  //     mask: var(--crop-left-url) top left/6.6px repeat-y,
-  //       linear-gradient(to right, transparent 0px, transparent 5.9px, black 6px, black 100%);
-  //   }
-  // }
+		> .clip_inner > .label::before {
+			background-color: var(--theme);
+			font-weight: bold;
+			color: var(--surface-color);
+		}
 
-  // &.cropped_right {
-  //   padding-right: 0.5px;
-  //   &:has(+ .clip:not(.cropped_left)) { padding-right: 1px; }
-  //   .container { padding-right: 4px; }
+		> .clip_inner > .label_backdrop {
+			background-color: var(--theme-overlay);
+		}
 
-  //   .clip_inner {
-  //     mask: var(--crop-right-url) top right/6.6px repeat-y,
-  //       linear-gradient(to right, black 6px, black calc(100% - 6px), transparent calc(100% - 5.9px));
-  //   }
-  // }
+		// .clip_inner {
+		//   // background-color: color-mix(in hsl, var(--surface-color-hover) 40%, var(--surface-color-light)) !important;
+		// }
+	}
 
-  // &.cropped_left.cropped_right {
-  //   .clip_inner {
-  //     mask: var(--crop-left-url) top left/6.6px repeat-y,
-  //       var(--crop-right-url) top right/6.6px repeat-y,
-  //       linear-gradient(to right, transparent, transparent 5.9px, black 6px, black calc(100% - 6px), transparent calc(100% - 5.9px));
-  //   }
-  // }
+	.clip_wrapper {
+		position: relative;
+		cursor: grab;
+		height: 100%;
+		pointer-events: auto;
 
+		&:active {
+			cursor: grabbing;
+		}
 
-  &:not(.add_source) .clip_wrapper:hover {
-    z-index: 100;
-
-    > .clip_inner > .label::before {
-      background-color: var(--theme);
-      font-weight: bold;
-      color: var(--surface-color);
-    }
-
-    > .clip_inner > .label_backdrop {
-      background-color: var(--theme-overlay);
-    }
-
-    // .clip_inner {
-    //   // background-color: color-mix(in hsl, var(--surface-color-hover) 40%, var(--surface-color-light)) !important;
-    // }
-  }
-
-  .clip_wrapper {
-    position: relative;
-    cursor: grab;
-    height: 100%;
-    pointer-events: auto;
-
-    &:active {
-      cursor: grabbing;
-    }
-
-    .clip_inner {
-      // overflow: hidden;
-      height: 100%;
+		.clip_inner {
+			height: 100%;
 			background-color: var(--surface-color-hover);
 			border-radius: var(--radius);
 			transition: background-color 0.15s;
-    }
+		}
 
+		.clip_container {
+			--label-padding: 16px;
+			--label-buffer: 512px;
+			--label-fade-dist: 32px;
 
-    .clip_container {
-      --label-padding: 16px;
-      --label-buffer: 512px;
-      --label-fade-dist: 32px;
+			pointer-events: none;
+			width: calc(100% + var(--label-buffer));
+			mask-image: linear-gradient(to right,
+				black 0px,
+				black calc(100% - var(--label-buffer) - var(--label-fade-dist) - var(--label-padding)),
+				transparent calc(100% - var(--label-buffer) - var(--label-padding)));
+			height: 100%;
+			display: flex;
+			margin-left: 8px;
+			align-items: center;
+			will-change: transform;
+		}
 
-      pointer-events: none;
-      width: calc(100% + var(--label-buffer));
-      mask-image: linear-gradient(to right,
-        black 0px,
-        black calc(100% - var(--label-buffer) - var(--label-fade-dist) - var(--label-padding)),
-        transparent calc(100% - var(--label-buffer) - var(--label-padding)));
-      height: 100%;
-      display: flex;
-      margin-left: 8px;
-      align-items: center;
-      will-change: transform;
+		.clip_drag {
+			position: absolute;
+			width: 4px;
+			height: 100%;
+			top: 0;
+			bottom: 0;
+			opacity: 0;
+			border-radius: 0px 4px 4px 0px;
+			transition: background-color 0.15s, opacity 0.15s;
 
-      // .clip_label {
-      //   display: grid;
-      // }
-    }
+			&::before {
+				content: '';
+				display: block;
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				left: -6px;
+				right: -3px;
+			}
 
-    .clip_drag {
-      position: absolute;
-      width: 4px;
-      height: 100%;
-      top: 0;
-      bottom: 0;
-      opacity: 0;
-      border-radius: 0px 4px 4px 0px;
-      transition: background-color 0.15s, opacity 0.15s;
+			background-color: rgba(255, 255, 255, 0.15);
 
-      &::before {
-        content: '';
-        display: block;
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: -6px;
-        right: -3px;
-      }
+			&.can_extend {
+				background-color: color-mix(in hsl, var(--theme) 40%, transparent);
+			}
 
-      background-color: rgba(255, 255, 255, 0.15);
+			&:hover {
+				opacity: 1 !important;
+				// background-color: var(--theme);
+			}
 
-      &.can_extend {
-        background-color: color-mix(in hsl, var(--theme) 40%, transparent);
-      }
+			&.left { transform: scaleX(-1); left: 0; cursor: w-resize; }
+			&.right { right: 0; cursor: e-resize; }
 
-      &:hover {
-        opacity: 1 !important;
-        // background-color: var(--theme);
-      }
+			&:active {
+				opacity: 1;
 
-      &.left { transform: scaleX(-1); left: 0; cursor: w-resize; }
-      &.right { right: 0; cursor: e-resize; }
+				background-color: var(--surface-color-light);
+				&.can_extend { background-color: var(--theme); }
+			}
+		}
 
-      &:active {
-        opacity: 1;
-
-        background-color: var(--surface-color-light);
-        &.can_extend { background-color: var(--theme); }
-      }
-    }
-
-    &:hover .clip_drag {
-      opacity: 0.4;
-    }
-  }
+		&:hover .clip_drag {
+			opacity: 0.4;
+		}
+	}
 }
 
 .label {
 	position: absolute;
 	height: 32px;
 	padding: 2px;
-  top: 100%;
+	top: 100%;
 	cursor: pointer;
 	z-index: 5;
 
@@ -249,10 +231,10 @@
 
 	&:hover,
 	&:active {
-    z-index: 10;
+		z-index: 10;
 
-    &::before {
-      box-shadow: 0 0 0 2px white inset;
+		&::before {
+			box-shadow: 0 0 0 2px white inset;
 		}
 	}
 }
@@ -261,7 +243,7 @@
 	box-sizing: content-box;
 	position: absolute;
 	height: 24px;
-  top: 100%;
+	top: 100%;
 	margin-top: 4px;
 	margin-left: 4px;
 	padding-right: 24px;
@@ -273,99 +255,100 @@
 }
 
 .scene_clip, .missing_clip, .image_clip, .video_clip {
+	--color: white;
 	height: 40px;
 }
 
 .clip_label {
-  display: flex;
-  gap: 6px;
-  width: max-content;
-  position: sticky;
-  left: 12px;
-  z-index: 10;
-  width: max-content;
+	display: flex;
+	gap: 6px;
+	width: max-content;
+	position: sticky;
+	left: 12px;
+	z-index: 10;
+	width: max-content;
 
-  svg {
-    width: 16px;
-    color: #fff;
-    opacity: 0.3;
-    flex-shrink: 0;
-  }
+	svg {
+		width: 16px;
+		color: #fff;
+		opacity: 0.3;
+		flex-shrink: 0;
+	}
 
-  .name {
-    margin: 0;
-    flex-grow: 1;
-    overflow: hidden;
-    white-space: nowrap;
+	.name {
+		margin: 0;
+		flex-grow: 1;
+		overflow: hidden;
+		white-space: nowrap;
 
-    .source {
-      cursor: pointer;
-      position: relative;
-      height: 100%;
+		.source {
+			cursor: pointer;
+			position: relative;
+			height: 100%;
 
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-  }
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+	}
+}
+
+.waveform {
+	position: absolute;
+	z-index: 0;
+	opacity: 0.2;
+	pointer-events: none;
+	height: 100%;
+	image-rendering: pixelated;
+	image-rendering: crisp-edges;
 }
 
 .audio_clip {
-  height: 32px;
-  --color: var(--theme);
-  --background: color-mix(in oklab, var(--theme) 17%, var(--background-color-dark));
+	height: 32px;
+	--color: var(--theme);
+	--background: color-mix(in oklab, var(--theme) 17%, var(--background-color-dark));
 
-  .clip_wrapper {
-    .clip_inner {
-      background-color: var(--background);
-    }
-  }
+	.clip_wrapper {
+		.clip_inner {
+			background-color: var(--background);
+		}
+	}
 
-  .waveform {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    left: 0;
-    z-index: 0;
-    opacity: 0.2;
-    pointer-events: none;
-  }
+	.name {
+		color: color-mix(in oklab, var(--theme) 40%, white) !important;
+		text-shadow:
+			0px 0px 7px var(--background),
+			// 0px 0px 8px var(--background),
+			// 0px 0px 8px var(--background),
+			// 0px 0px 8px var(--background),
+			0px 0px 7px var(--background),
+			0px 0px 8px var(--background),
+			0px 0px 9px var(--background),
+			0px 0px 10px var(--background);
+		// font-weight: bold;
+		// background-color: color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
+		// padding: 6px 12px 6px 0px !important;
+		// display: block;
+		z-index: 20;
+	}
 
-  .name {
-    color: color-mix(in oklab, var(--theme) 40%, white) !important;
-    text-shadow:
-      0px 0px 7px var(--background),
-      // 0px 0px 8px var(--background),
-      // 0px 0px 8px var(--background),
-      // 0px 0px 8px var(--background),
-      0px 0px 7px var(--background),
-      0px 0px 8px var(--background),
-      0px 0px 9px var(--background),
-      0px 0px 10px var(--background);
-    // font-weight: bold;
-    // background-color: color-mix(in oklab, var(--theme) 15%, var(--background-color-dark));
-    // padding: 6px 12px 6px 0px !important;
-    // display: block;
-    z-index: 20;
-  }
+	.clip_label {
+		transition: opacity 0.35s;
+	}
 
-  .clip_label {
-    transition: opacity 0.35s;
-  }
+	&:hover .clip_label {
+		opacity: 0;
+	}
 
-  &:hover .clip_label {
-    opacity: 0;
-  }
-
-  svg {
-    color: color-mix(in oklab, white 30%, var(--theme));
-    opacity: 0.7;
-  }
+	svg {
+		color: color-mix(in oklab, white 30%, var(--theme));
+		opacity: 0.7;
+	}
 
 
-  .audio_container {
-    display: grid;
-    position: absolute;
-    top: 0;
-  }
+	.audio_container {
+		display: grid;
+		position: absolute;
+		top: 0;
+	}
 }

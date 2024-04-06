@@ -1,7 +1,7 @@
 {
   "version": 0,
   "shared": {
-    "background": null,
+    "background": "rgba(0,0,0,0)",
     "range": [
       0,
       null
@@ -72,7 +72,7 @@
           "uuid": 5,
           "type": "video",
           "path": "bindless_audio.mkv",
-          "offset": 11.733333333333333,
+          "offset": 11.833333333333334,
           "start": 2.6333333333333333,
           "length": 3.3333333333333335,
           "volume": 1
@@ -81,7 +81,7 @@
           "uuid": 7,
           "type": "image",
           "path": "okami_baiku_cropped.png",
-          "offset": 15.433333333333334,
+          "offset": 15.533333333333333,
           "start": 0,
           "length": 1.5666666666666667,
           "volume": 1
@@ -99,18 +99,18 @@
           "uuid": 4,
           "type": "scene",
           "path": "Square",
-          "offset": 20,
+          "offset": 20.2,
           "start": 0,
-          "length": 2,
+          "length": 2.466666666666667,
           "volume": 1
         },
         {
           "uuid": 8,
           "type": "scene",
           "path": "Video2",
-          "offset": 219.3,
-          "start": 3.433333333333333,
-          "length": 1.5666666666666667,
+          "offset": 38.1,
+          "start": 0,
+          "length": 5,
           "volume": 1
         }
       ],
@@ -122,16 +122,16 @@
           "offset": 0,
           "start": 0,
           "length": 2.6666666666666665,
-          "volume": 2.8
+          "volume": 2
         },
         {
           "uuid": 13,
           "type": "audio",
           "path": "the_quick_brown_fox.wav",
-          "offset": 4.966666666666667,
-          "start": 0.36666666666666664,
-          "length": 2.933333333333333,
-          "volume": 2.8
+          "offset": 4.6,
+          "start": 0,
+          "length": 3.3,
+          "volume": 2
         }
       ],
       [
@@ -141,7 +141,7 @@
           "path": "astronaut_rain.mp3",
           "offset": 0,
           "start": 29.333333333333332,
-          "length": 220.86666666666667,
+          "length": 287.3,
           "volume": 0.4
         }
       ],
@@ -150,9 +150,9 @@
           "uuid": 18,
           "type": "audio",
           "path": "astronaut_rain.mp3",
-          "offset": 6.333333333333333,
-          "start": 35.666666666666664,
-          "length": 21.633333333333333,
+          "offset": 15.9,
+          "start": 45.233333333333334,
+          "length": 16.233333333333334,
           "volume": 0.4
         }
       ]
@@ -161,24 +161,24 @@
       {
         "solo": false,
         "muted": false,
-        "locked": true
+        "locked": false
       },
       {
         "solo": false,
         "muted": false,
-        "locked": true
+        "locked": false
       },
       {
         "solo": false,
         "muted": false,
-        "locked": true
+        "locked": false
       },
       {
         "solo": false,
         "muted": false,
-        "locked": true
+        "locked": false
       }
     ],
-    "targetTrack": 1
+    "targetTrack": 2
   }
 }

@@ -1,24 +1,21 @@
 /* @jsxImportSource preact */
 
 import { RefObject} from 'preact';
-import { useContext, useRef } from 'preact/hooks';
+import { useRef } from 'preact/hooks';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { useApplication, useDuration, labelClipDraggingLeftSignal,
   MouseButton, DragIndicator, usePreviewSettings, useSharedSettings, clamp } from '@motion-canvas/ui';
 
 import styles from './Timeline.module.scss';
 
-import { useClips } from '../Contexts';
-import { TimelineContext } from './TimelineContext';
-import { useShortcut } from '../Hooks';
-import { RangeEndToCursor, RangeStartToCursor } from '../shortcut/ShortcutMappings';
+import { useClips, useTimeline } from '../Contexts';
 
 export interface RangeSelectorProps {
   rangeRef: RefObject<HTMLDivElement>;
 }
 
 export function RangeSelector({rangeRef}: RangeSelectorProps) {
-  const { pixelsToFrames, framesToPixels, pointerToFrames } = useContext(TimelineContext);
+  const { pixelsToFrames, framesToPixels, pointerToFrames } = useTimeline();
   const { player, meta } = useApplication();
   const { range } = useSharedSettings();
   const duration = useDuration();
@@ -115,7 +112,7 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
 
   return (
     <div
-      className={styles.range_track}
+      class={styles.range_track}
       onPointerDown={handleStartDefineRange}
       onPointerMove={handleMoveDefineRange}
       onPointerUp={handleStopDefineRange}
@@ -128,7 +125,7 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
           left: `${framesToPixels(normalizedStart)}px`,
           width: `${framesToPixels(normalizedEnd - normalizedStart)}px`
         }}
-        className={styles.range}
+        class={styles.range}
         onPointerDown={handleStartShiftRange}
         onPointerMove={handleMoveShiftRange}
         onPointerUp={handleEndShiftRange}
@@ -149,12 +146,12 @@ interface RangeHandleProps {
 }
 
 function RangeHandle({value, setValue, onDrop}: RangeHandleProps) {
-  const { pixelsToFrames } = useContext(TimelineContext);
+  const { pixelsToFrames } = useTimeline();
   const { player } = useApplication();
 
   return (
     <DragIndicator
-      className={styles.handle}
+      class={styles.handle}
       onPointerDown={event => {
         if (event.button === MouseButton.Left) {
           event.preventDefault();
