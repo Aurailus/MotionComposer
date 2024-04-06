@@ -1,6 +1,9 @@
 import { MutableRefObject, RefObject } from 'preact/compat';
 import { useCallback, useState, useMemo, useRef, useEffect } from 'preact/hooks';
+
 import { addEventListener } from './Util';
+import MotionComposer from './MotionComposer';
+import { useSubscribableValue } from '@motion-canvas/ui';
 
 /** useRef() but the initial value takes a lazy initializer. */
 export function useLazyRef<T = any>(initializer: () => T): MutableRefObject<T> {
@@ -181,4 +184,18 @@ export function useStoredState<T>(def: T | (() => T), key: string, serverDefault
 	useEffect(() => window.localStorage.setItem(key, JSON.stringify(value)), [ key, value ]);
 
 	return [ value, setValue ];
+}
+
+export function useClips() {
+	return useSubscribableValue(MotionComposer.onClipsChanged);
+}
+
+export function useCurrentClip() {
+	return useSubscribableValue(MotionComposer.onCurrentClipChanged);
+}
+
+export function useTracks() {
+	const tracks = useSubscribableValue(MotionComposer.onTracksChanged);
+	const targetTrack = useSubscribableValue(MotionComposer.onTargetTrackChanged);
+	return useMemo(() => ({ tracks, targetTrack }), [ tracks, targetTrack ]);
 }

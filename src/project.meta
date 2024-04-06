@@ -29,7 +29,7 @@
     }
   },
   "motion-composer": {
-    "uuidNext": 130,
+    "uuidNext": 0,
     "clips": [
       [
         {
@@ -108,7 +108,7 @@
           "uuid": 8,
           "type": "scene",
           "path": "Video2",
-          "offset": 38.1,
+          "offset": 33.63333333333333,
           "start": 0,
           "length": 5,
           "volume": 1
@@ -128,7 +128,7 @@
           "uuid": 13,
           "type": "audio",
           "path": "the_quick_brown_fox.wav",
-          "offset": 4.6,
+          "offset": 4.866666666666666,
           "start": 0,
           "length": 3.3,
           "volume": 2

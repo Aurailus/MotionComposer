@@ -1,44 +1,12 @@
 import { createContext } from 'preact';
 import { Signal } from '@preact/signals';
+import { useContext } from 'preact/hooks';
 import { Vector2 } from '@motion-canvas/core';
-import { useContext, useState, useEffect } from 'preact/hooks';
 
-import { Signalish } from './Signalish';
+import MotionComposer from './MotionComposer';
 import AudioController from './audio/AudioController';
 import { ShortcutModule } from './shortcut/ShortcutMappings';
-import { Clip, ClipSource, EditorMode, EditorTool, Track } from './Types';
-
-/** Clips Context. */
-
-export const ClipsContext = createContext<{ clips: Signalish<readonly Clip[][]> }>({} as any);
-
-export function useClips() {
-	return useContext(ClipsContext).clips;
-}
-
-/** Current Clip Context. */
-
-export const CurrentClipContext = createContext<{ clip: Signal<Clip> }>({} as any);
-
-export function useCurrentClip() {
-	const currentClipSignal = useContext(CurrentClipContext).clip;
-	const [ clip, setClip ] = useState<Clip>(currentClipSignal.peek());
-	useEffect(() => currentClipSignal.subscribe(setClip), [ currentClipSignal ]);
-	return clip;
-}
-
-/** Tracks Context. */
-
-export interface TracksContextData {
-	tracks: Signalish<readonly Track[]>;
-	targetTrack: Signalish<number>;
-}
-
-export const TracksContext = createContext<TracksContextData>({} as any);
-
-export function useTracks() {
-	return useContext(TracksContext);
-}
+import { ClipSource, EditorMode, EditorTool } from './Types';
 
 /** Audio Context. */
 
@@ -49,7 +17,7 @@ export interface AudioContextData {
 export const AudioContext = createContext<AudioContextData>({} as any);
 
 export function useAudio() {
-	return useContext(AudioContext).audio;
+  return MotionComposer.audio;
 }
 
 /** UI Context. */

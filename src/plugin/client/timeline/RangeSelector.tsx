@@ -8,7 +8,8 @@ import { useApplication, useDuration, labelClipDraggingLeftSignal,
 
 import styles from './Timeline.module.scss';
 
-import { useClips, useTimeline } from '../Contexts';
+import { useClips } from '../Hooks';
+import { useTimeline } from '../Contexts';
 
 export interface RangeSelectorProps {
   rangeRef: RefObject<HTMLDivElement>;
@@ -46,7 +47,7 @@ export function RangeSelector({rangeRef}: RangeSelectorProps) {
     }
     else {
       const playheadSeconds = player.status.framesToSeconds(pointerToFrames(evt.clientX));
-      const clip = (clips()[0] ?? []).find(c => c.offset <= playheadSeconds && c.offset + c.length >= playheadSeconds);
+      const clip = (clips[0] ?? []).find(c => c.offset <= playheadSeconds && c.offset + c.length >= playheadSeconds);
       if (!clip) return;
       meta.shared.range.update(clip.cache.clipRange[0], clip.cache.clipRange[1], duration, fps);
     }

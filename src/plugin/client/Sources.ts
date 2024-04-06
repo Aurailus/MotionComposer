@@ -1,17 +1,16 @@
 import { ClipSource } from './Types';
-import { signal } from '@preact/signals';
-import { Scene } from '@motion-canvas/core';
-import { useRef, useEffect } from 'preact/hooks';
+import { useSubscribableValue } from '@motion-canvas/ui';
+import { Scene, ValueDispatcher } from '@motion-canvas/core';
 
 const AUDIO_FILES = import.meta.glob(`/media/*.(wav|mp3|ogg|flac)`, { query: '?meta' });
 const VIDEO_FILES = import.meta.glob(`/media/*.(mp4|mkv|webm)`, { query: '?meta' });
 const IMAGE_FILES = import.meta.glob(`/media/*.(png|jpg|jpeg|webp)`, { query: '?meta' });
 
-let sources = signal<ClipSource[]>([]);
+let sources = new ValueDispatcher<ClipSource[]>([]);
 
 function replaceSourcesOfType(type: string, insert: ClipSource[]) {
 	if (type === 'image') insert.forEach(s => s.duration = Infinity);
-	const existingOfType = sources.peek().filter(s => s.type === type).sort((a, b) => a.path.localeCompare(b.path));
+	const existingOfType = sources.current.filter(s => s.type === type).sort((a, b) => a.path.localeCompare(b.path));
 	const sortedInsert = [ ...insert ].sort((a, b) => a.path.localeCompare(b.path));
 
 	let identical = existingOfType.length === sortedInsert.length;
@@ -31,8 +30,8 @@ function replaceSourcesOfType(type: string, insert: ClipSource[]) {
 
 	if (identical) return;
 
-	sources.value = [
-		...sources.peek().filter(s => s.type !== type),
+	sources.current = [
+		...sources.current.filter(s => s.type !== type),
 		...sortedInsert,
 	];
 }
@@ -60,10 +59,12 @@ export function updateSceneSources(scenes: Scene[]) {
 	})));
 }
 
+export const onSourcesChanged = sources.subscribable;
+
 export function getSources() {
-	return sources.peek();
+	return sources.current;
 }
 
 export function useSources() {
-	return sources.value;
+	return useSubscribableValue(sources.subscribable);
 }

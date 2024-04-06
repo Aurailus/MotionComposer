@@ -12,8 +12,9 @@ import { Playhead } from './Playhead';
 import { Timestamps } from './Timestamps';
 import ScrubPreview from './ScrubPreview';
 import TimelineTrack from './TimelineTrack';
+import MotionComposer from '../MotionComposer';
+import { useClips, useTracks } from '../Hooks';
 import { RangeSelector } from './RangeSelector';
-import { useClips, useTracks } from '../Contexts';
 import TimelineTrackLabel from './TimelineTrackLabel';
 import * as Shortcut from '../shortcut/ShortcutMappings';
 import useShortcutHover from '../shortcut/useShortcutHover';
@@ -57,8 +58,8 @@ export default function Timeline() {
 	const [ mode, setMode ] = useStoredState<EditorMode>('compose', 'editor-mode');
 	const [ snap, setSnap ] = useStoredState<boolean>(true, 'editor-snap');
 
-	const modifiedClips = useStore<Clip[][]>(() => clips().map(arr => [ ...arr ]));
-	useLayoutEffect(() => void modifiedClips(clips().map(arr => [ ...arr ])), [ clips ]);
+	const modifiedClips = useStore<Clip[][]>(() => clips.map(arr => [ ...arr ]));
+	useLayoutEffect(() => void modifiedClips(clips.map(arr => [ ...arr ])), [ clips ]);
 
 	const warnedAboutRange = useRef(false);
 	const seeking = useSignal<number | null>(null);
@@ -336,7 +337,7 @@ export default function Timeline() {
 	}
 
 	function handleClipResizeStart(clip: Clip, side: 'left' | 'right', offset: number) {
-		const newClips = clips().map(arr => [ ...arr ]);
+		const newClips = clips.map(arr => [ ...arr ]);
 		const newClipInd = newClips[clip.cache.channel].findIndex(c => c.uuid === clip.uuid);
 		if (newClipInd === -1) return;
 		const oldClip = newClips[clip.cache.channel][newClipInd];
@@ -382,7 +383,7 @@ export default function Timeline() {
 	}
 
 	function handleClipResizeMove(clip: Clip, offset: number) {
-		const newClips = clips().map(arr => [ ...arr ]);
+		const newClips = clips.map(arr => [ ...arr ]);
 		const newClipInd = newClips[clip.cache.channel].findIndex(c => c.uuid === clip.uuid);
 		if (newClipInd === -1) return;
 		const oldClip = newClips[clip.cache.channel][newClipInd];
@@ -416,29 +417,29 @@ export default function Timeline() {
 	}
 
 	function handleClipCommit() {
-		clips(modifiedClips());
+		MotionComposer.setClips(modifiedClips());
 	}
 
 	function handleSetTrackSolo(channel: number, solo: boolean) {
-		const newTracks = [ ...tracks() ];
+		const newTracks = [ ...tracks ];
 		newTracks[channel] = { ...newTracks[channel], solo };
-		tracks(newTracks);
+		MotionComposer.setTracks(newTracks);
 	}
 
 	function handleSetTrackMuted(channel: number, muted: boolean) {
-		const newTracks = [ ...tracks() ];
+		const newTracks = [ ...tracks ];
 		newTracks[channel] = { ...newTracks[channel], muted };
-		tracks(newTracks);
+		MotionComposer.setTracks(newTracks);
 	}
 
 	function handleSetTrackLocked(channel: number, locked: boolean) {
-		const newTracks = [ ...tracks() ];
+		const newTracks = [ ...tracks ];
 		newTracks[channel] = { ...newTracks[channel], locked };
-		tracks(newTracks);
+		MotionComposer.setTracks(newTracks);
 	}
 
 	function handleSetTargetTrack(channel: number) {
-		targetTrack(channel);
+		MotionComposer.setTargetTrack(channel);
 	}
 
 	return (
@@ -447,12 +448,12 @@ export default function Timeline() {
 				<Toolbar/>
 
 				<div class={styles.timeline_labels}>
-					{(tracks().map((track, i) => <TimelineTrackLabel
+					{(tracks.map((track, i) => <TimelineTrackLabel
 						channel={i}
 						solo={track.solo}
 						locked={track.locked}
 						muted={track.muted}
-						target={targetTrack() === i}
+						target={targetTrack === i}
 						setSolo={(solo: boolean) => handleSetTrackSolo(i, solo)}
 						setLocked={(locked: boolean) => handleSetTrackLocked(i, locked)}
 						setMuted={(muted: boolean) => handleSetTrackMuted(i, muted)}

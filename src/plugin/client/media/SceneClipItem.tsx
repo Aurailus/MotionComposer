@@ -7,7 +7,7 @@ import { useRef, useLayoutEffect } from 'preact/hooks';
 import styles from './Media.module.scss';
 
 import * as Icon from '../icon';
-import { useCurrentClip } from '../Contexts';
+import { useCurrentClip } from '../Hooks';
 import ClipItem, { ClipItemChildProps } from './ClipItem';
 
 const PREVIEW_WIDTH = 240;

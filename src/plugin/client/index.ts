@@ -1,8 +1,18 @@
+import { makeEditorPlugin } from '@motion-canvas/ui';
+
+import Provider from './Provider';
 import MotionComposer from './MotionComposer';
+import { MediaTabConfig } from './media/MediaTabConfig';
+import { OverlayConfig } from './overlay/OverlayConfig';
 
-const composer = new MotionComposer();
-export default composer.makePlugin();
+export default makeEditorPlugin({
+	name: 'motion-composer',
+	previewOverlay: OverlayConfig,
+	tabs: [ MediaTabConfig ],
+	provider: Provider,
+	project: MotionComposer.patchProject.bind(MotionComposer),
+	player: MotionComposer.patchPlayer.bind(MotionComposer)
+});
 
-export { useClips, useCurrentClip } from './Contexts';
-export { useStore, useLazyRef, useUUID, getUUID } from './Hooks';
+export { useStore, useLazyRef, useUUID, getUUID, useClips, useCurrentClip, useTracks } from './Hooks';
 export type { Clip, ClipInfo, ClipSource, ClipType } from './Types';
