@@ -65,32 +65,32 @@
           "path": "cobalt.mkv",
           "offset": 6.933333333333334,
           "start": 23.033333333333335,
-          "length": 4.566666666666666,
+          "length": 4.333333333333333,
           "volume": 1
         },
         {
           "uuid": 5,
           "type": "video",
           "path": "bindless_audio.mkv",
-          "offset": 11.833333333333334,
-          "start": 2.6333333333333333,
-          "length": 3.3333333333333335,
+          "offset": 12.133333333333333,
+          "start": 3,
+          "length": 2.966666666666667,
           "volume": 1
         },
         {
           "uuid": 7,
           "type": "image",
           "path": "okami_baiku_cropped.png",
-          "offset": 15.533333333333333,
+          "offset": 15.666666666666666,
           "start": 0,
-          "length": 1.5666666666666667,
+          "length": 1.4666666666666666,
           "volume": 1
         },
         {
           "uuid": 3,
           "type": "scene",
           "path": "Rectangle",
-          "offset": 17.566666666666666,
+          "offset": 17.533333333333335,
           "start": 0,
           "length": 2.433333333333333,
           "volume": 1
@@ -99,7 +99,7 @@
           "uuid": 4,
           "type": "scene",
           "path": "Square",
-          "offset": 20.2,
+          "offset": 20.866666666666667,
           "start": 0,
           "length": 2.466666666666667,
           "volume": 1
@@ -108,7 +108,7 @@
           "uuid": 8,
           "type": "scene",
           "path": "Video2",
-          "offset": 33.63333333333333,
+          "offset": 39.56666666666667,
           "start": 0,
           "length": 5,
           "volume": 1

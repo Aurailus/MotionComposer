@@ -71,6 +71,7 @@ export default function EventLabel({ clip, event }: Props) {
 
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     labelClipDraggingLeftSignal.value = null;
+    e.stopPropagation();
 
     // If the event was moved, update the time.
     if (moved) {

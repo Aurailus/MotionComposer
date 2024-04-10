@@ -131,7 +131,7 @@ export class MotionComposer {
 		project.audio = null;
 
 		// Patch the video pool.
-		this.patchVideoPool();
+		this.patchVideo();
 		// Create the settings wrapper.
 		this.settings = this.createSettingsWrapper(project.meta);
 
@@ -140,15 +140,16 @@ export class MotionComposer {
 	}
 
 	/**
-	 * Patches `Video.pool`, the internal cache where all scene Videos are stored,
-	 * to mute all videos on creation, to prevent audio from playing.
+	 * Patches the existing video element to work properly with Motion Composer.
 	 */
 
-	private patchVideoPool() {
+	private patchVideo() {
+		// Make all videos muted.
 		const pool = (Video as any).pool as Record<string, HTMLVideoElement>;
 
 		(Video as any).pool = new Proxy(pool, {
 			get(target, prop, receiver) {
+				if (prop === '__raw__') return pool;
 				return Reflect.get(target, prop, receiver);
 			},
 			set(target, prop, value, receiver) {
@@ -156,6 +157,22 @@ export class MotionComposer {
 				value.muted = true;
 				return true;
 			}
+		});
+
+		// Set the video playback rate to match the player speed.
+		const composer = this;
+		const oldSeekedVideo = (Video.prototype as any).seekedVideo;
+		const oldFastSeekedVideo = (Video.prototype as any).fastSeekedVideo;
+
+		(Video.prototype as any).seekedVideo = (function() {
+			const video = oldSeekedVideo.call(this);
+			video.playbackRate *= composer.player.status.speed;
+			return video;
+		});
+		(Video.prototype as any).fastSeekedVideo = (function() {
+			const video = oldFastSeekedVideo.call(this);
+			video.playbackRate *= composer.player.status.speed;
+			return video;
 		});
 	}
 
@@ -311,18 +328,8 @@ export class MotionComposer {
 			if (duration === 0) return;
 			this.frame = duration;
 			this.duration = duration;
-			// console.log('PLAYBACK MANAGER DURATION', this.duration)
 		}).bind(player.playback);
 
-		/* This override should not be necessary. Player:380 should automatically set the duration
-		 * to the playback manager's frame count. But it doesn't, and I don't want to figure out why. */
-		const oldPlayerPrepare = (player as any).prepare.bind(player);
-		(player as any).prepare = (async function() {
-			const playerState = await oldPlayerPrepare();
-			// console.log('Setting duration to', this.playback.duration);
-			this.duration.current = this.playback.duration;
-			return playerState;
-		}).bind(player);
 
 		// Override the audio properties to use an AudioProxy object.
 		(player.audio as any).setSource = () => { /* no-op */ }
@@ -330,7 +337,7 @@ export class MotionComposer {
 		(player.audio as any).audioElement = new AudioProxy(this.audio);
 
 		// Recalculate the player's duration and stuff when the clips change.
-		this.onClipsChanged.subscribe(() => player.playback.recalculate());
+		this.onClipsChanged.subscribe(() => (player as any).requestRecalculation());
 
 		// Load the initial state from the settings.
 		this.tracks.current = this.settings.get('tracks') ?? [];
@@ -338,6 +345,16 @@ export class MotionComposer {
 		this.targetTrack.current = this.settings.get('targetTrack') ?? 1;
 		setUUIDNext(this.settings.get('uuidNext') ?? 0);
 		this.setClips(this.settings.get('clips') ?? []);
+
+		// Update the current clip to the one that will be seeked to.
+		// This is necessary for the scene previews to render correctly on initial load.
+		this.updateCurrentClip((this.player as any).requestedSeek ?? 0);
+
+		// Force update the player's speed, as although it's loaded by Motion Canvas,
+		// it doesn't actually update the playback properly.
+		const desiredSpeed = (player as any).playerState.current.speed ?? 1;
+		(player as any).playerState.current.speed = 1;
+		player.setSpeed(desiredSpeed);
 	}
 
 	/**

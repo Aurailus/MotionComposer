@@ -8,7 +8,12 @@ import Video from './scenes/Video?scene';
 import MotionComposer from './plugin/client';
 
 export default makeProject({
-  scenes: [ Circle, Square, Rectangle, Video ],
+  scenes: [
+    Circle,
+    Square,
+    Video,
+    Rectangle,
+  ],
   plugins: [ MotionComposer() ],
   experimentalFeatures: true
 });
