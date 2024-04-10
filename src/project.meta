@@ -132,6 +132,33 @@
           "start": 0,
           "length": 3.3,
           "volume": 2
+        },
+        {
+          "uuid": 24,
+          "type": "audio",
+          "path": "test_recording.wav",
+          "offset": 9,
+          "start": 0.7333333333333333,
+          "length": 0.7666666666666667,
+          "volume": 6
+        },
+        {
+          "uuid": 25,
+          "type": "audio",
+          "path": "test_recording.wav",
+          "offset": 9.766666666666667,
+          "start": 0.7333333333333333,
+          "length": 0.7666666666666667,
+          "volume": 6
+        },
+        {
+          "uuid": 26,
+          "type": "audio",
+          "path": "test_recording.wav",
+          "offset": 10.533333333333333,
+          "start": 0.7333333333333333,
+          "length": 0.7666666666666667,
+          "volume": 6
         }
       ],
       [
@@ -150,9 +177,9 @@
           "uuid": 18,
           "type": "audio",
           "path": "astronaut_rain.mp3",
-          "offset": 15.9,
-          "start": 45.233333333333334,
-          "length": 16.233333333333334,
+          "offset": 12.2,
+          "start": 41.53333333333333,
+          "length": 17.6,
           "volume": 0.4
         }
       ]

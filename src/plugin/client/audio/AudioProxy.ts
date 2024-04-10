@@ -2,6 +2,7 @@ import { ensure } from '../Util';
 import AudioController, { BUFFER_QUEUE_LOOKAHEAD } from './AudioController';
 
 const BUFFER_INTERVAL = 100;
+const UPDATE_INTERVAL = 16;
 
 ensure(BUFFER_INTERVAL + 50 < BUFFER_QUEUE_LOOKAHEAD, 'BUFFER_INTERVAL must be less than BUFFER_QUEUE_LOOKAHEAD.');
 
@@ -91,9 +92,9 @@ export default class AudioProxy {
 				sinceLastBuffer = 0;
 			}
 
-			requestAnimationFrame(update);
+			setTimeout(update, UPDATE_INTERVAL);
 		}
 
-		requestAnimationFrame(update);
+		setTimeout(update, UPDATE_INTERVAL);
 	}
 }
